@@ -17,8 +17,11 @@ class SELDFeatureExtractor():
         self.root_dir = params['root_dir']
         self.feat_dir = params['feat_dir']
         self.desc_dir = params['desc_dir']
-        self.hop_len = params['hop_len']
-        self.label_hop_len = params['label_hop_len']
+        self.fs = params['sampling_rate']
+        self.hop_len_s = params['hop_len']
+        self.hop_len = int(self.fs * self.hop_len_s)
+        self.label_hop_len_s = params['label_hop_len']
+        self.label_hop_len = int(self.fs * self.label_hop_len_s)
         self.win_len = 2 * self.hop_len
         self.nfft = 2 ** (self.win_len - 1).bit_length()
         self.nb_mel_bins = params['nb_mels']
@@ -28,7 +31,6 @@ class SELDFeatureExtractor():
 
         self.nb_mels = params['nb_mels']
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
-        self.fs = params['sampling_rate']
 
         # label extraction
         self.nb_label_frames = params['label_sequence_length']
