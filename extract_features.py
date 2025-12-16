@@ -86,6 +86,7 @@ class SELDFeatureExtractor():
             log_mel_spectra = librosa.power_to_db(mel_spectra)
             mel_feat[:, :, ch_cnt] = log_mel_spectra
         mel_feat = mel_feat.transpose((0, 2, 1)) # shape (T, 4, F)
+
         return mel_feat
 
     def get_intensity_vectors(self, linear_spectra):
@@ -112,7 +113,7 @@ class SELDFeatureExtractor():
 
         # extract intensity vectors
         foa_iv = self.get_intensity_vectors(spect)
-        feat = np.concatenate((mel_spect, foa_iv), axis=-1)
+        feat = np.concatenate((mel_spect, foa_iv.reshape(mel_spect.shape[0], 3, self.nb_mel_bins)), axis=1)
 
         if feat is not None:
             print('{}: {}, {}'.format(file_cnt, os.path.basename(wav_path), feat.shape))
