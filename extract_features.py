@@ -32,10 +32,6 @@ class SELDFeatureExtractor():
         self.nb_mels = params['nb_mels']
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
 
-        # label extraction
-        self.nb_label_frames = params['label_sequence_length']
-        self.nb_unique_classes = params['nb_classes']
-
     def create_folder(folder_name):
         if not os.path.exists(folder_name):
             print('{} folder does not exist, creating it.'.format(folder_name))
