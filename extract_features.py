@@ -72,6 +72,19 @@ class SELDFeatureExtractor():
         mel_feat = mel_feat.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], -1))
         return mel_feat
 
+    def get_intensity_vectors(self, linear_spectra):
+        W = linear_spectra[:, :, 0]
+        I = np.real(np.conj(W)[:, :, np.newaxis] * linear_spectra[:, :, 1:])
+        E = self._eps + (np.abs(W)**2 + ((np.abs(linear_spectra[:, :, 1:])**2).sum(-1)) / 3.0)
+
+        I_norm = I / E[:, :, np.newaxis]
+        I_norm_mel = np.transpose(np.dot(np.transpose(I_norm, (0, 2, 1)), self._mel_wts), (0, 2, 1))
+        iv = I_norm_mel.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], self._nb_mel_bins * 3))
+        if np.isnan(iv).any():
+            print('Feature extraction is generating nan outputs')
+            exit()
+        return iv
+
     def extract_file_feature(self, arg_in):
         file_cnt, wav_path, feat_path = arg_in
         spect = self.get_spectrogram_for_file(wav_path)
@@ -82,9 +95,9 @@ class SELDFeatureExtractor():
         feat = None
 
         # extract intensity vectors
-        # foa_iv = self.get_foa_intensity_vectors(spect)
-        # feat = np.concatenate((mel_spect, foa_iv), axis=-1)
-        feat = np.concatenate(mel_spect, axis=-1)
+        foa_iv = self.get_intensity_vectors(spect)
+        feat = np.concatenate((mel_spect, foa_iv), axis=-1)
+
         if feat is not None:
             print('{}: {}, {}'.format(file_cnt, os.path.basename(wav_path), feat.shape))
             np.save(feat_path, feat)
