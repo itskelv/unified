@@ -85,7 +85,7 @@ class SELDFeatureExtractor():
             mel_spectra = np.dot(mag_spectra, self.mel_wts)
             log_mel_spectra = librosa.power_to_db(mel_spectra)
             mel_feat[:, :, ch_cnt] = log_mel_spectra
-            mel_feat = mel_feat.transpose((0, 2, 1))  # shape (T, 4, F)
+        mel_feat = mel_feat.transpose((0, 2, 1)) # shape (T, 4, F)
         return mel_feat
 
     def get_intensity_vectors(self, linear_spectra):
