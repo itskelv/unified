@@ -26,8 +26,8 @@ class SELDFeatureExtractor():
         self.win_len = 2 * self.hop_len
         self.nfft = 2 ** (self.win_len - 1).bit_length()
         self.nb_mel_bins = params['nb_mels']
-        self.nb_channels = 4
-        self._eps = 1e-8
+        self.nb_channels = 4 # limit channels up to 4
+        self.eps = 1e-8
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
         self.filewise_frames = {}
 
@@ -41,7 +41,22 @@ class SELDFeatureExtractor():
 
     def load_audio(self, audio_path):
         fs, audio = wav.read(audio_path)
-        audio = audio[:, :self.nb_channels] / 32768.0 + self._eps
+        audio = audio / 32768.0 + self._eps
+
+        if audio.shape[1] < 4:  # stereo
+            L = audio[:, 0]
+            R = audio[:, 1]
+
+            W = (L + R) / np.sqrt(2) # mimic omnidirectional
+            X = (L - R) / np.sqrt(2) # mimic x axis
+            Y = np.zeros_like(W) # fake channel
+            Z = np.zeros_like(W) # fake channel
+
+            audio = np.stack([W, X, Y, Z], axis=1)
+
+        else:  # FOA
+            audio = audio[:, :4]
+
         return audio, fs
 
     def spectrogram(self, audio_input, nb_frames):
@@ -73,18 +88,18 @@ class SELDFeatureExtractor():
         mel_feat = mel_feat.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], -1))
         return mel_feat
 
-    # def get_intensity_vectors(self, linear_spectra):
-    #     W = linear_spectra[:, :, 0]
-    #     I = np.real(np.conj(W)[:, :, np.newaxis] * linear_spectra[:, :, 1:])
-    #     E = self._eps + (np.abs(W)**2 + ((np.abs(linear_spectra[:, :, 1:])**2).sum(-1)) / 3.0)
+    def get_intensity_vectors(self, linear_spectra):
+        W = linear_spectra[:, :, 0]
+        I = np.real(np.conj(W)[:, :, np.newaxis] * linear_spectra[:, :, 1:])
+        E = self._eps + (np.abs(W)**2 + ((np.abs(linear_spectra[:, :, 1:])**2).sum(-1)) / 3.0)
 
-    #     I_norm = I / E[:, :, np.newaxis]
-    #     I_norm_mel = np.transpose(np.dot(np.transpose(I_norm, (0, 2, 1)), self.mel_wts), (0, 2, 1))
-    #     iv = I_norm_mel.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], self.nb_mel_bins * 3))
-    #     if np.isnan(iv).any():
-    #         print('Feature extraction is generating nan outputs')
-    #         exit()
-    #     return iv
+        I_norm = I / E[:, :, np.newaxis]
+        I_norm_mel = np.transpose(np.dot(np.transpose(I_norm, (0, 2, 1)), self.mel_wts), (0, 2, 1))
+        iv = I_norm_mel.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], self.nb_mel_bins * 3))
+        if np.isnan(iv).any():
+            print('Feature extraction is generating nan outputs')
+            exit()
+        return iv
 
     def extract_file_feature(self, arg_in):
         file_cnt, wav_path, feat_path = arg_in
@@ -93,13 +108,11 @@ class SELDFeatureExtractor():
         # extract mel
         mel_spect = self.get_mel_spectrogram(spect)
 
-        feat = mel_spect
-
-        # feat = None
+        feat = None
 
         # extract intensity vectors
-        # foa_iv = self.get_intensity_vectors(spect)
-        # feat = np.concatenate((mel_spect, foa_iv), axis=-1)
+        foa_iv = self.get_intensity_vectors(spect)
+        feat = np.concatenate((mel_spect, foa_iv), axis=-1)
 
         if feat is not None:
             print('{}: {}, {}'.format(file_cnt, os.path.basename(wav_path), feat.shape))
@@ -129,5 +142,5 @@ if __name__ == '__main__':
     from parameters import params
     params['multiACCDOA'] = False
     feature_extractor = SELDFeatureExtractor(params)
-    feature_extractor.extract_features(split='dev')
-    feature_extractor.extract_labels(split='dev')
+    feature_extractor.extract_features()
+    feature_extractor.extract_labels()
