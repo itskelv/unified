@@ -80,7 +80,7 @@ class SELDFeatureExtractor():
 
         I_norm = I / E[:, :, np.newaxis]
         I_norm_mel = np.transpose(np.dot(np.transpose(I_norm, (0, 2, 1)), self.mel_wts), (0, 2, 1))
-        iv = I_norm_mel.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], self._nb_mel_bins * 3))
+        iv = I_norm_mel.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], self.nb_mel_bins * 3))
         if np.isnan(iv).any():
             print('Feature extraction is generating nan outputs')
             exit()
