@@ -28,6 +28,7 @@ class SELDFeatureExtractor():
         self.nb_mel_bins = params['nb_mels']
         self.nb_channels = 4
         self._eps = 1e-8
+        self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
         self.filewise_frames = {}
 
         self.nb_mels = params['nb_mels']
@@ -78,7 +79,7 @@ class SELDFeatureExtractor():
         E = self._eps + (np.abs(W)**2 + ((np.abs(linear_spectra[:, :, 1:])**2).sum(-1)) / 3.0)
 
         I_norm = I / E[:, :, np.newaxis]
-        I_norm_mel = np.transpose(np.dot(np.transpose(I_norm, (0, 2, 1)), self._mel_wts), (0, 2, 1))
+        I_norm_mel = np.transpose(np.dot(np.transpose(I_norm, (0, 2, 1)), self.mel_wts), (0, 2, 1))
         iv = I_norm_mel.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], self._nb_mel_bins * 3))
         if np.isnan(iv).any():
             print('Feature extraction is generating nan outputs')
