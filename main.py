@@ -5,7 +5,7 @@ from extract_features import SELDFeatureExtractor
 
 def main():
     feature_extractor = SELDFeatureExtractor(params)
-    feature_extractor.extract_features(split='dev')
+    feature_extractor.extract_features()
     # feature_extractor.extract_labels(split='dev')
 
 if __name__ == '__main__':
