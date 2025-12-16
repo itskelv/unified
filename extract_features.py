@@ -20,7 +20,7 @@ class SELDFeatureExtractor():
         self.hop_len = params['hop_len']
         self.label_hop_len = params['label_hop_len']
         self.win_len = 2 * self.hop_len
-        self.nfft = self.next_greater_power_of_2(self.win_len)
+        self.nfft = 2 ** (self.win_len - 1).bit_length()
         self.nb_mel_bins = params['nb_mels']
         self.nb_channels = 4
         self._eps = 1e-8
@@ -33,9 +33,6 @@ class SELDFeatureExtractor():
         # label extraction
         self.nb_label_frames = params['label_sequence_length']
         self.nb_unique_classes = params['nb_classes']
-
-    def next_greater_power_of_2(x):
-        return 2 ** (x - 1).bit_length()
 
     def create_folder(folder_name):
         if not os.path.exists(folder_name):
