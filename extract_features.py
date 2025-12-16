@@ -15,7 +15,7 @@ class SELDFeatureExtractor():
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.params = params
         self._dataset_combination = '{}_{}'.format('foa', 'dev')
-        self.root_dir = os.path.join(params['root_dir'], os.path.join(params['root_dir'], self._dataset_combination))
+        self.root_dir = os.path.join(params['root_dir'], self._dataset_combination)
         self.feat_dir = params['feat_dir']
         self.desc_dir = os.path.join(self.root_dir, 'metadata_dev')
         self.fs = params['sampling_rate']
