@@ -41,7 +41,7 @@ class SELDFeatureExtractor():
 
     def load_audio(self, audio_path):
         fs, audio = wav.read(audio_path)
-        audio = audio / 32768.0 + self._eps
+        audio = audio / 32768.0 + self.eps
 
         if audio.shape[1] < 4:  # stereo
             L = audio[:, 0]
@@ -91,7 +91,7 @@ class SELDFeatureExtractor():
     def get_intensity_vectors(self, linear_spectra):
         W = linear_spectra[:, :, 0]
         I = np.real(np.conj(W)[:, :, np.newaxis] * linear_spectra[:, :, 1:])
-        E = self._eps + (np.abs(W)**2 + ((np.abs(linear_spectra[:, :, 1:])**2).sum(-1)) / 3.0)
+        E = self.eps + (np.abs(W)**2 + ((np.abs(linear_spectra[:, :, 1:])**2).sum(-1)) / 3.0)
 
         I_norm = I / E[:, :, np.newaxis]
         I_norm_mel = np.transpose(np.dot(np.transpose(I_norm, (0, 2, 1)), self.mel_wts), (0, 2, 1))
