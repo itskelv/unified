@@ -65,21 +65,21 @@ class SELDFeatureExtractor():
 
     def load_audio(self, audio_path):
         fs, audio = wav.read(audio_path)
-        audio = audio[:, :4] / 32768.0 + self.eps
+        audio = audio / 32768.0 + self.eps
 
-        # if audio.shape[1] < 4:  # stereo
-        #     L = audio[:, 0]
-        #     R = audio[:, 1]
+        if audio.shape[1] < 4:  # stereo
+            L = audio[:, 0]
+            R = audio[:, 1]
 
-        #     W = (L + R) / np.sqrt(2) # mimic omnidirectional
-        #     X = (L - R) / np.sqrt(2) # mimic x axis
-        #     Y = np.zeros_like(W) # fake channel
-        #     Z = np.zeros_like(W) # fake channel
+            W = (L + R) / np.sqrt(2) # mimic omnidirectional
+            X = (L - R) / np.sqrt(2) # mimic x axis
+            Y = np.zeros_like(W) # fake channel
+            Z = np.zeros_like(W) # fake channel
 
-        #     audio = np.stack([W, X, Y, Z], axis=1)
+            audio = np.stack([W, X, Y, Z], axis=1)
 
-        # else:  # FOA
-        #     audio = audio[:, :4]
+        else:  # FOA
+            audio = audio[:, :4]
 
         return audio, fs
 
@@ -289,7 +289,7 @@ class SELDFeatureExtractor():
             mel_spectra = np.dot(mag_spectra, self.mel_wts)
             log_mel_spectra = librosa.power_to_db(mel_spectra)
             mel_feat[:, :, ch_cnt] = log_mel_spectra
-        mel_feat = mel_feat.transpose((0, 2, 1)) # shape (T, 4, F)
+        mel_feat = mel_feat.transpose((0, 2, 1)).reshape((linear_spectra.shape[0], -1))
 
         return mel_feat
 
@@ -391,7 +391,7 @@ if __name__ == '__main__':
     # use this space to test if the SELDFeatureExtractor class works as expected.
     # All the classes will be called from the main.py for actual use.
     from parameters import params
-    params['multiACCDOA'] = False
+    # params['multiACCDOA'] = False
     feature_extractor = SELDFeatureExtractor(params)
     feature_extractor.extract_features()
     feature_extractor.preprocess_features()
