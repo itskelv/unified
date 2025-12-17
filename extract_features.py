@@ -83,7 +83,7 @@ class SELDFeatureExtractor():
 
         return audio, fs
 
-    def load_output_format_file(self, _output_format_file, cm2m=False):  # TODO: Reconsider cm2m conversion
+    def load_output_format_file(self, _output_format_file, cm2m=False):
         """
         Loads DCASE output format csv file and returns it in dictionary format
 
@@ -92,7 +92,7 @@ class SELDFeatureExtractor():
         """
         _output_dict = {}
         _fid = open(_output_format_file, 'r')
-        # next(_fid)
+        next(_fid)
         _words = []     # For empty files
         for _line in _fid:
             _words = _line.strip().split(',')
