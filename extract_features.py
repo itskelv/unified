@@ -67,7 +67,7 @@ class SELDFeatureExtractor():
         fs, audio = wav.read(audio_path)
         audio = audio / 32768.0 + self.eps
 
-        if audio.shape[1] < 4:  # stereo
+        if audio.shape < 4:  # stereo
             L = audio[:, 0]
             R = audio[:, 1]
 
