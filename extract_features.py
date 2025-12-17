@@ -316,8 +316,8 @@ class SELDFeatureExtractor():
         feat = None
 
         # extract intensity vectors
-        foa_iv = self.get_intensity_vectors(spect)
-        feat = np.concatenate((mel_spect, foa_iv.reshape(mel_spect.shape[0], 3, self.nb_mel_bins)), axis=1)
+        iv = self.get_intensity_vectors(spect)
+        feat = np.concatenate((mel_spect, iv), axis=1)
 
         if feat is not None:
             print('{}: {}, {}'.format(file_cnt, os.path.basename(wav_path), feat.shape))
