@@ -17,7 +17,7 @@ class SELDFeatureExtractor():
         """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.params = params
-        self._dataset_combination = '{}_{}'.format('foa', 'dev')
+        self._dataset_combination = '{}_{}'.format('audio', 'dev')
         self.root_dir = os.path.join(params['root_dir'], self._dataset_combination)
         self.feat_dir = params['feat_dir']
         self.label_dir = params['label_dir']
