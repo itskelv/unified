@@ -4,6 +4,7 @@ import torch
 import scipy.io.wavfile as wav
 import numpy as np
 import librosa
+from sklearn import preprocessing
 
 class SELDFeatureExtractor():
     def __init__(self, params):
@@ -18,6 +19,7 @@ class SELDFeatureExtractor():
         self.root_dir = os.path.join(params['root_dir'], self._dataset_combination)
         self.feat_dir = params['feat_dir']
         self.desc_dir = os.path.join(self.root_dir, 'metadata_dev')
+        self.norm_feat_dir = params['norm_feat_dir']
         self.fs = params['sampling_rate']
         self.hop_len_s = params['hop_len']
         self.hop_len = int(self.fs * self.hop_len_s)
@@ -135,6 +137,34 @@ class SELDFeatureExtractor():
                 feat_path = os.path.join(self.feat_dir, '{}.npy'.format(wav_filename.split('.')[0]))
                 self.extract_file_feature((file_cnt, wav_path, feat_path))
                 arg_list.append((file_cnt, wav_path, feat_path))
+
+    def preprocess_features(self):
+        self.create_folder(self.norm_feat_dir)
+
+        # pre-processing starts
+        print('Estimating weights for normalizing feature files:')
+        print('\t\tfeat_dir: {}'.format(self.feat_dir))
+
+        spec_scaler = preprocessing.StandardScaler()
+        for file_cnt, file_name in enumerate(os.listdir(self.feat_dir)):
+            print('{}: {}'.format(file_cnt, file_name))
+            feat_file = np.load(os.path.join(self.feat_dir, file_name))
+            spec_scaler.partial_fit(feat_file)
+            del feat_file
+
+        print('Normalizing feature files:')
+        print('\t\tfeat_dir_norm {}'.format(self.norm_feat_dir))
+        for file_cnt, file_name in enumerate(os.listdir(self.feat_dir)):
+            print('{}: {}'.format(file_cnt, file_name))
+            feat_file = np.load(os.path.join(self.feat_dir, file_name))
+            feat_file = spec_scaler.transform(feat_file)
+            np.save(
+                os.path.join(self.norm_feat_dir, file_name),
+                feat_file
+            )
+            del feat_file
+
+        print('normalized files written to {}'.format(self.norm_feat_dir))
     
 
 if __name__ == '__main__':
@@ -144,4 +174,5 @@ if __name__ == '__main__':
     params['multiACCDOA'] = False
     feature_extractor = SELDFeatureExtractor(params)
     feature_extractor.extract_features()
+    feature_extractor.preprocess_features()
     # feature_extractor.extract_labels()

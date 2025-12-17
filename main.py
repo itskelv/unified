@@ -6,6 +6,7 @@ from extract_features import SELDFeatureExtractor
 def main():
     feature_extractor = SELDFeatureExtractor(params)
     feature_extractor.extract_features()
+    feature_extractor.preprocess_features()
     # feature_extractor.extract_labels()
 
 if __name__ == '__main__':

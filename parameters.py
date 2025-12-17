@@ -1,6 +1,7 @@
 params = {
     'root_dir': '../unifieddataset',
     'feat_dir': '../unifieddataset/features',
+    'norm_feat_dir': '../unifieddataset/norm_features',
     'sampling_rate': 24000,
     'hop_len': 0.02,
     'label_hop_len': 0.1,
