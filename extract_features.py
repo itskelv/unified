@@ -21,7 +21,7 @@ class SELDFeatureExtractor():
         self.root_dir = os.path.join(params['root_dir'], self._dataset_combination)
         self.feat_dir = params['feat_dir']
         self.label_dir = params['label_dir']
-        self.desc_dir = os.path.join(params['root_dir'], 'metadata_dev')
+        self.desc_dir = os.path.join(params['root_dir'], 'metadata')
         self.norm_feat_dir = params['norm_feat_dir']
         self.fs = params['sampling_rate']
         self.hop_len_s = params['hop_len']
