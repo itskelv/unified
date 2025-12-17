@@ -4,6 +4,9 @@ import torch
 import scipy.io.wavfile as wav
 import numpy as np
 import librosa
+from sklearn import preprocessing
+import wave
+import contextlib
 
 class SELDFeatureExtractor():
     def __init__(self, params):
@@ -135,6 +138,48 @@ class SELDFeatureExtractor():
                 feat_path = os.path.join(self.feat_dir, '{}.npy'.format(wav_filename.split('.')[0]))
                 self.extract_file_feature((file_cnt, wav_path, feat_path))
                 arg_list.append((file_cnt, wav_path, feat_path))
+
+    def get_frame_stats(self):
+
+        if len(self.filewise_frames) != 0:
+            return
+
+        print('Computing frame stats:')
+        print('\t\taud_dir {}\n\t\tdesc_dir {}\n\t\tfeat_dir {}'.format(
+            self.root_dir, self.desc_dir, self.feat_dir))
+        for sub_folder in os.listdir(self.root_dir):
+            loc_aud_folder = os.path.join(self.root_dir, sub_folder)
+            for file_cnt, file_name in enumerate(os.listdir(loc_aud_folder)):
+                wav_filename = '{}.wav'.format(file_name.split('.')[0])
+                with contextlib.closing(wave.open(os.path.join(loc_aud_folder, wav_filename), 'r')) as f:
+                    audio_len = f.getnframes()
+                nb_feat_frames = int(audio_len / float(self.hop_len))
+                nb_label_frames = int(audio_len / float(self.label_hop_len))
+                self.filewise_frames[file_name.split('.')[0]] = [nb_feat_frames, nb_label_frames]
+        return
+
+
+    def extract_all_labels(self):
+        self.get_frame_stats()
+        self.label_dir = params['labeled_feat_dir']
+
+        print('Extracting labels:')
+        print('\t\taud_dir {}\n\t\tdesc_dir {}\n\t\tlabel_dir {}'.format(
+            self.root_dir, self.desc_dir, self.label_dir))
+        self.create_folder(self.label_dir)
+        for sub_folder in os.listdir(self.desc_dir):
+            loc_desc_folder = os.path.join(self.desc_dir, sub_folder)
+            for file_cnt, file_name in enumerate(os.listdir(loc_desc_folder)):
+                wav_filename = '{}.wav'.format(file_name.split('.')[0])
+                nb_label_frames = self.filewise_frames[file_name.split('.')[0]][1]
+                desc_file_polar = self.load_output_format_file(os.path.join(loc_desc_folder, file_name))
+                desc_file = self.convert_output_format_polar_to_cartesian(desc_file_polar)
+                if self._multi_accdoa:
+                    label_mat = self.get_adpit_labels_for_file(desc_file, nb_label_frames)
+                else:
+                    label_mat = self.get_labels_for_file(desc_file, nb_label_frames)
+                print('{}: {}, {}'.format(file_cnt, file_name, label_mat.shape))
+                np.save(os.path.join(self.label_dir, '{}.npy'.format(wav_filename.split('.')[0])), label_mat)
     
 
 if __name__ == '__main__':
@@ -144,4 +189,5 @@ if __name__ == '__main__':
     params['multiACCDOA'] = False
     feature_extractor = SELDFeatureExtractor(params)
     feature_extractor.extract_features()
-    feature_extractor.extract_labels()
+    feature_extractor.preprocess_features()
+    feature_extractor.extract_all_labels()

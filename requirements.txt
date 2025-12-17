@@ -1,3 +1,7 @@
 torch
 scipy
 numpy
+sklearn
+joblib
+contextlib
+wave
