@@ -65,21 +65,21 @@ class SELDFeatureExtractor():
 
     def load_audio(self, audio_path):
         fs, audio = wav.read(audio_path)
-        audio = audio / 32768.0 + self.eps
+        audio = audio[:, :4] / 32768.0 + self.eps
 
-        if audio.shape < 4:  # stereo
-            L = audio[:, 0]
-            R = audio[:, 1]
+        # if audio.shape[1] < 4:  # stereo
+        #     L = audio[:, 0]
+        #     R = audio[:, 1]
 
-            W = (L + R) / np.sqrt(2) # mimic omnidirectional
-            X = (L - R) / np.sqrt(2) # mimic x axis
-            Y = np.zeros_like(W) # fake channel
-            Z = np.zeros_like(W) # fake channel
+        #     W = (L + R) / np.sqrt(2) # mimic omnidirectional
+        #     X = (L - R) / np.sqrt(2) # mimic x axis
+        #     Y = np.zeros_like(W) # fake channel
+        #     Z = np.zeros_like(W) # fake channel
 
-            audio = np.stack([W, X, Y, Z], axis=1)
+        #     audio = np.stack([W, X, Y, Z], axis=1)
 
-        else:  # FOA
-            audio = audio[:, :4]
+        # else:  # FOA
+        #     audio = audio[:, :4]
 
         return audio, fs
 
