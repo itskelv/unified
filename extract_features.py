@@ -92,7 +92,7 @@ class SELDFeatureExtractor():
         """
         _output_dict = {}
         _fid = open(_output_format_file, 'r')
-        next(_fid)
+        # next(_fid)
         _words = []     # For empty files
         for _line in _fid:
             _words = _line.strip().split(',')
