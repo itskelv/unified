@@ -5,6 +5,7 @@ from parameters import params
 def main():
     feature_extractor = SELDFeatureExtractor(params)
     feature_extractor.extract_features()
+    feature_extractor.extract_labels()
     feature_extractor.preprocess_features()
 
 
