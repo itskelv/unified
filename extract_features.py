@@ -189,7 +189,7 @@ class SELDFeatureExtractor():
             
             base_name = file_name.split('.')[0]
             
-            if base_name in self.format:
+            if base_name in self.format_type:
                 format_type = self.format_type[base_name]
                 
                 if format_type == 'foa':
