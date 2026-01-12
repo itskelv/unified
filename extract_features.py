@@ -459,5 +459,5 @@ if __name__ == '__main__':
     # params['multiACCDOA'] = False
     feature_extractor = SELDFeatureExtractor(params)
     feature_extractor.extract_features()
-    feature_extractor.extract_labels()
     feature_extractor.preprocess_features()
+    feature_extractor.extract_labels()
