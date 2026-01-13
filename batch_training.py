@@ -125,11 +125,9 @@ def test_epoch(data_generator, model, criterion, dcase_output_folder, params, de
                     break
                     
                 output_dict = {}
-                for frame_cnt in range(sed_pred0.shape[1]):  # Changed from shape[0] to shape[1]
+                for frame_cnt in range(sed_pred0.shape[0]):
                     frame_idx = frame_cnt
-                    for class_cnt in range(sed_pred0.shape[2]):  # Changed from shape[1] to shape[2]
-                        # Determine whether tracks are similar
-                        # Note: Need to adjust indexing for batch dimension
+                    for class_cnt in range(params['unique_classes']):
                         flag_0sim1 = determine_similar_location(
                             sed_pred0[batch_idx, frame_idx, class_cnt], 
                             sed_pred1[batch_idx, frame_idx, class_cnt],
