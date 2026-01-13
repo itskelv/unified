@@ -334,10 +334,7 @@ def main(argv):
         print(f'Training on split {split}')
         print('='*80)
         
-        unique_name = '{}_{}_split{}_{}'.format(
-            job_id, params['mode'], split_cnt, 'multiaccdoa'
-        )
-        model_name = '{}_model.pth'.format(os.path.join(params['model_dir'], unique_name))
+        model_name = '{}_model.pth'.format(os.path.join(params['model_dir'], 'multi_accdoa'))
         print(f"Model will be saved as: {model_name}")
         
         os.makedirs(params['model_dir'], exist_ok=True)
