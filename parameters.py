@@ -7,5 +7,12 @@ params = {
     'sampling_rate': 24000,
     'hop_len': 0.02,
     'label_hop_len': 0.1,
-    'nb_mels': 64
+    'nb_mels': 64,
+
+
+    'batch_size': 128,
+    'label_sequence_lenght': 50
 }
+
+feature_label_resolution = int(params['label_hop_len'] // params['hop_len'])
+params['feature_sequence_lenght'] = params['label_sequence_length'] * feature_label_resolution
