@@ -32,7 +32,7 @@ class SELDFeatureExtractor():
         self.nfft = 2 ** (self.win_len - 1).bit_length()
         self.nb_mel_bins = params['nb_mels']
         self.nb_channels = 4 # limit channels up to 4
-        self.nb_unique_classes = params['unique_class']
+        self.nb_unique_classes = params['unique_classes']
         self.eps = 1e-8
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
         self.filewise_frames = {}
