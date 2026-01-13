@@ -320,8 +320,7 @@ def main(argv):
     torch.autograd.set_detect_anomaly(True)
     
     # Get parameters
-    task_id = '1' if len(argv) < 2 else argv[1]
-    params = parameters.get_params(task_id)
+    params = parameters.params
     
     job_id = 1 if len(argv) < 3 else argv[-1]
     
@@ -335,8 +334,8 @@ def main(argv):
         print(f'Training on split {split}')
         print('='*80)
         
-        unique_name = '{}_{}_{}_split{}_{}'.format(
-            task_id, job_id, params['mode'], split_cnt, 'multiaccdoa'
+        unique_name = '{}_{}_split{}_{}'.format(
+            job_id, params['mode'], split_cnt, 'multiaccdoa'
         )
         model_name = '{}_model.pth'.format(os.path.join(params['model_dir'], unique_name))
         print(f"Model will be saved as: {model_name}")
