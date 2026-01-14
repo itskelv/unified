@@ -57,7 +57,7 @@ class ComputeSELDResults(object):
         assert not (self.segment_level and self.evaluate_distance), 'Segment level evaluation is not supported for distance evaluation'
 
         # Load feature class
-        self._feat_cls = extract_features.FeatureClass(params)
+        self._feat_cls = extract_features.SELDFeatureExtractor(params)
 
         # collect reference files
         self._ref_labels = {}

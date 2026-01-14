@@ -34,6 +34,8 @@ class SELDFeatureExtractor():
         self.nb_mel_bins = params['nb_mels']
         self.nb_channels = 4 # limit channels up to 4
         self.nb_unique_classes = params['unique_classes']
+        self._label_frame_res = self._fs / float(self.label_hop_len)
+        self._nb_label_frames_1s = int(self._label_frame_res)
         self.eps = 1e-8
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
         self.filewise_frames = {}
@@ -457,6 +459,47 @@ class SELDFeatureExtractor():
                 
                 print('{}: {}, {}'.format(file_cnt, file_name, label_mat.shape))
                 np.save(os.path.join(self.label_dir, '{}.npy'.format(wav_filename.split('.')[0])), label_mat)
+
+    def segment_labels(self, _pred_dict, _max_frames):
+        '''
+            Collects class-wise sound event location information in segments of length 1s from reference dataset
+        :param _pred_dict: Dictionary containing frame-wise sound event time and location information. Output of SELD method
+        :param _max_frames: Total number of frames in the recording
+        :return: Dictionary containing class-wise sound event location information in each segment of audio
+                dictionary_name[segment-index][class-index] = list(frame-cnt-within-segment, azimuth, elevation)
+        '''
+        nb_blocks = int(np.ceil(_max_frames / float(self._nb_label_frames_1s)))
+        output_dict = {x: {} for x in range(nb_blocks)}
+        for frame_cnt in range(0, _max_frames, self._nb_label_frames_1s):
+
+            # Collect class-wise information for each block
+            # [class][frame] = <list of doa values>
+            # Data structure supports multi-instance occurence of same class
+            block_cnt = frame_cnt // self._nb_label_frames_1s
+            loc_dict = {}
+            for audio_frame in range(frame_cnt, frame_cnt + self._nb_label_frames_1s):
+                if audio_frame not in _pred_dict:
+                    continue
+                for value in _pred_dict[audio_frame]:
+                    if value[0] not in loc_dict:
+                        loc_dict[value[0]] = {}
+
+                    block_frame = audio_frame - frame_cnt
+                    if block_frame not in loc_dict[value[0]]:
+                        loc_dict[value[0]][block_frame] = []
+                    loc_dict[value[0]][block_frame].append(value[1:])
+
+            # Update the block wise details collected above in a global structure
+            for class_cnt in loc_dict:
+                if class_cnt not in output_dict[block_cnt]:
+                    output_dict[block_cnt][class_cnt] = []
+
+                keys = [k for k in loc_dict[class_cnt]]
+                values = [loc_dict[class_cnt][k] for k in loc_dict[class_cnt]]
+
+                output_dict[block_cnt][class_cnt].append([keys, values])
+
+        return output_dict
 
 if __name__ == '__main__':
     # use this space to test if the SELDFeatureExtractor class works as expected.
