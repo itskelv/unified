@@ -32,3 +32,5 @@ params = {
 
 params['feature_label_resolution'] = int(params['label_hop_len'] // params['hop_len'])
 params['feature_sequence_length'] = params['label_sequence_length'] * params['feature_label_resolution']
+params['t_pool_size'] = [params['feature_label_resolution'], 1, 1]
+params['patience'] = int(params['nb_epochs'])
