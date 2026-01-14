@@ -30,6 +30,13 @@ params = {
 
     'nb_epochs': 250,
     'lr': 1e-3,
+
+    'average': 'macro',
+    'segment_based_metrics': False,
+    'evaluate_distance': True,
+    'lad_doa_thresh': 20,
+    'lad_dist_thresh': float('inf'),
+    'lad_reldist_thres': float('1'),
 }
 
 params['feature_label_resolution'] = int(params['label_hop_len'] // params['hop_len'])
