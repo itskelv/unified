@@ -7,6 +7,7 @@ import librosa
 from sklearn import preprocessing
 import wave
 import contextlib
+import shutil
 
 class SELDFeatureExtractor():
     def __init__(self, params):
@@ -45,6 +46,11 @@ class SELDFeatureExtractor():
         if not os.path.exists(folder_name):
             print('{} folder does not exist, creating it.'.format(folder_name))
             os.makedirs(folder_name)
+
+    def delete_and_create_folder(folder_name):
+        if os.path.exists(folder_name) and os.path.isdir(folder_name):
+            shutil.rmtree(folder_name)
+        os.makedirs(folder_name, exist_ok=True)
 
     def load_audio(self, audio_path):
         fs, audio = wav.read(audio_path)

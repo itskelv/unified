@@ -13,6 +13,7 @@ from data_loader import UnifiedDataGenerator
 from seld_result import ComputeSELDResults, reshape_3Dto2D
 from evaluation_metrics import distance_between_cartesian_coordinates
 import seldnet_model
+import extract_features
 
 
 def get_multi_accdoa_labels(accdoa_in, nb_classes):
@@ -368,11 +369,8 @@ def main(argv):
         print('\nModel architecture:')
         print(model)
         
-        # Create output folder for validation results
-        dcase_output_val_folder = os.path.join(
-            params['dcase_output_dir'],
-            f'{unique_name}_val_{strftime("%Y%m%d%H%M%S", gmtime())}'
-        )
+        dcase_output_val_folder = os.path.join(params['dcase_output_dir'], '{}_{}_val'.format(model_name, strftime("%Y%m%d%H%M%S", gmtime())))
+
         os.makedirs(dcase_output_val_folder, exist_ok=True)
         print(f'\nValidation results will be saved in: {dcase_output_val_folder}')
         
@@ -467,13 +465,9 @@ def main(argv):
             per_file=True
         )
         
-        # Create output folder for test results
-        dcase_output_test_folder = os.path.join(
-            params['dcase_output_dir'],
-            f'{unique_name}_test_{strftime("%Y%m%d%H%M%S", gmtime())}'
-        )
-        os.makedirs(dcase_output_test_folder, exist_ok=True)
-        print(f'Test results will be saved in: {dcase_output_test_folder}')
+        dcase_output_test_folder = os.path.join(params['dcase_output_dir'], '{}_{}_test'.format(model_name, strftime("%Y%m%d%H%M%S", gmtime())))
+        extract_features.delete_and_create_folder(dcase_output_test_folder)
+        print('Dumping recording-wise test results in: {}'.format(dcase_output_test_folder))
         
         # Run test
         test_loss = test_epoch(data_gen_test, model, criterion, dcase_output_test_folder, params, device, mode='test')

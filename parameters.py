@@ -3,6 +3,7 @@ params = {
     'feat_dir': '../unifieddataset/features',
     'norm_feat_dir': '../unifieddataset/norm_features',
     'label_dir': '../unifieddataset/labels',
+    'dcase_output_dir': 'results/',
     'unique_classes': 13,
     'sampling_rate': 24000,
     'hop_len': 0.02,
