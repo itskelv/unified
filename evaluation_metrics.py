@@ -1,17 +1,3 @@
-
-# Implements the localization and detection metrics proposed in [1] with extensions to support multi-instance of the same class from [2].
-#
-# [1] Joint Measurement of Localization and Detection of Sound Events
-# Annamaria Mesaros, Sharath Adavanne, Archontis Politis, Toni Heittola, Tuomas Virtanen
-# WASPAA 2019
-#
-# [2] Overview and Evaluation of Sound Event Localization and Detection in DCASE 2019
-# Politis, Archontis, Annamaria Mesaros, Sharath Adavanne, Toni Heittola, and Tuomas Virtanen.
-# IEEE/ACM Transactions on Audio, Speech, and Language Processing (2020).
-#
-# This script has MIT license
-#
-
 import numpy as np
 
 eps = np.finfo(float).eps

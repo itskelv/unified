@@ -61,14 +61,15 @@ def validate_epoch(data_generator, model, criterion, dcase_output_folder, params
     model.eval()
     
     with torch.no_grad():
-        for features, targets in data_generator.generate():
+        for features, targets, is_foa in data_generator.generate():
             # Move to device
             features = torch.tensor(features).to(device).float()
             targets = torch.tensor(targets).to(device).float()
+            is_foa = torch.tensor(is_foa).to(device)
             
             # Forward pass
             output = model(features)
-            loss = criterion(output, targets)
+            loss = criterion(output, targets, is_foa)
             
             # Update loss
             val_loss += loss.item()
@@ -95,6 +96,7 @@ def test_epoch(data_generator, model, criterion, dcase_output_folder, params, de
             # Move to device
             features = torch.tensor(features).to(device).float()
             targets = torch.tensor(targets).to(device).float()
+            is_foa = torch.tensor(is_foa).to(device)
             
             # Forward pass
             output = model(features)
@@ -287,15 +289,16 @@ def train_epoch(data_generator, optimizer, model, criterion, params, device):
     nb_train_batches, train_loss = 0, 0.
     model.train()
     
-    for features, targets in data_generator.generate():
+    for features, targets, is_foa in data_generator.generate():
         # Move to device
         features = torch.tensor(features).to(device).float()
         targets = torch.tensor(targets).to(device).float()
+        is_foa = torch.tensor(is_foa).to(device)
         
         # Forward pass
         optimizer.zero_grad()
         output = model(features)
-        loss = criterion(output, targets)
+        loss = criterion(output, targets, is_foa)
         
         # Backward pass
         loss.backward()

@@ -1,5 +1,6 @@
 params = {
     'root_dir': '../unifieddataset',
+    'desc_dir': '../unifieddataset/metadata',
     'feat_dir': '../unifieddataset/features',
     'norm_feat_dir': '../unifieddataset/norm_features',
     'label_dir': '../unifieddataset/labels',

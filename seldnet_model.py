@@ -1,5 +1,3 @@
-# The SELDnet architecture
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,10 +11,26 @@ class MSELoss_ADPIT(object):
         super().__init__()
         self._each_loss = nn.MSELoss(reduction='none')
 
+    def _mask_elevation(self, output, target, is_foa):
+        if is_foa is None:
+            return output, target
+
+        stereo_mask = (is_foa == 0).view(-1, 1, 1, 1)
+
+        z_idx = 2
+
+        output = output.clone()
+        target = target.clone()
+
+        output[:, :, z_idx::4, :] *= (~stereo_mask)
+        target[:, :, z_idx::4, :] *= (~stereo_mask)
+
+        return output, target
+
     def _each_calc(self, output, target):
         return self._each_loss(output, target).mean(dim=(2))  # class-wise frame-level
 
-    def __call__(self, output, target):
+    def __call__(self, output, target, is_foa=None):
         """
         Auxiliary Duplicating Permutation Invariant Training (ADPIT) for 13 (=1+6+6) possible combinations
         Args:
@@ -47,6 +61,21 @@ class MSELoss_ADPIT(object):
         target_C2C1C0 = torch.cat((target_C2, target_C1, target_C0), 2)
 
         output = output.reshape(output.shape[0], output.shape[1], target_A0A0A0.shape[2], target_A0A0A0.shape[3])  # output is set the same shape of target, [batch_size, frames, num_track*num_axis=3*4, num_class=12]
+
+        output, target_A0A0A0 = self._mask_elevation(output, target_A0A0A0, is_foa)
+        output, target_B0B0B1 = self._mask_elevation(output, target_B0B0B1, is_foa)
+        output, target_B0B1B0 = self._mask_elevation(output, target_B0B1B0, is_foa)
+        output, target_B0B1B1 = self._mask_elevation(output, target_B0B1B1, is_foa)
+        output, target_B1B0B0 = self._mask_elevation(output, target_B1B0B0, is_foa)
+        output, target_B1B0B1 = self._mask_elevation(output, target_B1B0B1, is_foa)
+        output, target_B1B1B0 = self._mask_elevation(output, target_B1B1B0, is_foa)
+        output, target_C0C1C2 = self._mask_elevation(output, target_C0C1C2, is_foa)
+        output, target_C0C2C1 = self._mask_elevation(output, target_C0C2C1, is_foa)
+        output, target_C1C0C2 = self._mask_elevation(output, target_C1C0C2, is_foa)
+        output, target_C1C2C0 = self._mask_elevation(output, target_C1C2C0, is_foa)
+        output, target_C2C0C1 = self._mask_elevation(output, target_C2C0C1, is_foa)
+        output, target_C2C1C0 = self._mask_elevation(output, target_C2C1C0, is_foa)
+
         pad4A = target_B0B0B1 + target_C0C1C2
         pad4B = target_A0A0A0 + target_C0C1C2
         pad4C = target_A0A0A0 + target_B0B0B1
@@ -162,11 +191,6 @@ class SeldModel(torch.nn.Module):
             x, _ = self.mhsa_block_list[mhsa_cnt](x_attn_in, x_attn_in, x_attn_in)
             x = x + x_attn_in
             x = self.layer_norm_list[mhsa_cnt](x)
-
-        if vid_feat is not None:
-            vid_feat = vid_feat.view(vid_feat.shape[0], vid_feat.shape[1], -1)  # b x 50 x 49
-            vid_feat = self.visual_embed_to_d_model(vid_feat)
-            x = self.transformer_decoder(x, vid_feat)
 
         for fnn_cnt in range(len(self.fnn_list) - 1):
             x = self.fnn_list[fnn_cnt](x)

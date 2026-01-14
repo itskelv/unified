@@ -120,7 +120,6 @@ class UnifiedDataGenerator(object):
         print(f"  Total batches: {self._nb_total_batches}")
     
     def generate(self):
-        """Generate batches"""
         if self._shuffle:
             random.shuffle(self._filenames_list)
         
@@ -200,8 +199,10 @@ class UnifiedDataGenerator(object):
             batch_feat = np.transpose(batch_feat, (0, 2, 1, 3))
             
             batch_label = self._split_sequences(batch_label, self._label_seq_len)
+
+            is_foa = 1 if format_type == 'foa' else 0
             
-            yield batch_feat, batch_label
+            yield batch_feat, batch_label, is_foa
             batch_idx += 1
     
     def _split_sequences(self, data, seq_len):
