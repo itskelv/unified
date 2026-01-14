@@ -5,11 +5,11 @@ params = {
     # 'norm_feat_dir': '../unifieddataset/norm_features',
     # 'label_dir': '../unifieddataset/labels',
     'root_dir': '../DCASE_FOA_DATASET',
-    'desc_dir': '../DCASE_FOA_DATASET/metadata_dev',
+    'desc_dir': '../DCASE_FOA_DATASET/metadata',
     'feat_dir': '../DCASE_FOA_DATASET/features',
     'norm_feat_dir': '../DCASE_FOA_DATASET/norm_features',
     'label_dir': '../DCASE_FOA_DATASET/labels',
-    
+
     'dcase_output_dir': 'results/',
     'unique_classes': 13,
     'sampling_rate': 24000,
