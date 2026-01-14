@@ -34,7 +34,7 @@ class SELDFeatureExtractor():
         self.nb_mel_bins = params['nb_mels']
         self.nb_channels = 4 # limit channels up to 4
         self.nb_unique_classes = params['unique_classes']
-        self._label_frame_res = self._fs / float(self.label_hop_len)
+        self._label_frame_res = self.fs / float(self.label_hop_len)
         self._nb_label_frames_1s = int(self._label_frame_res)
         self.eps = 1e-8
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
