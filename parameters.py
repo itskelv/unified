@@ -11,7 +11,8 @@ params = {
 
     'batch_size': 128,
     'label_sequence_length': 50,
-    'model_dir': 'models/'
+    'model_dir': 'models/',
+    'f_pool_size': [4, 4, 2]  
 }
 
 params['feature_label_resolution'] = int(params['label_hop_len'] // params['hop_len'])
