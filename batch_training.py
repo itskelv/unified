@@ -386,7 +386,7 @@ def main(argv):
         best_F, best_LE, best_seld_scr = 0., 180., 9999.
         patience_cnt = 0
         
-        nb_epoch = 2 if params['quick_test'] else params['nb_epochs']
+        nb_epoch = params['nb_epochs']
         optimizer = optim.Adam(model.parameters(), lr=params['lr'])
         
         # Use MSELoss_ADPIT for multi-ACCDOA
