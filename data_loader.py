@@ -194,9 +194,8 @@ class UnifiedDataGenerator(object):
             batch_feat = batch_feat.reshape((self._feature_batch_seq_len // self._feature_seq_len,
                                              self._feature_seq_len,
                                              self._unified_feat_dim))
-            batch_feat = batch_feat.reshape((batch_feat.shape[0], batch_feat.shape[1],
-                                             self._nb_ch, self._nb_mel_bins))
-            batch_feat = np.transpose(batch_feat, (0, 2, 1, 3))
+            batch_feat = batch_feat.reshape((self._batch_size, self._feature_seq_len, self._unified_feat_dim)
+)
             
             batch_label = self._split_sequences(batch_label, self._label_seq_len)
 
