@@ -160,6 +160,7 @@ class SELDFeatureExtractor():
         if stereo_spect is not None:  # stereo
             # extract ild ipd
             ild_ipd = self.get_ild_ipd(stereo_spect)
+            mel_spect = mel_spect.reshape(mel_spect.shape[0], -1)
             feat = np.concatenate((mel_spect, ild_ipd), axis=-1)
             self.format_type[base_name] = 'stereo'
             format = 'stereo'
