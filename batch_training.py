@@ -16,6 +16,7 @@ import seldnet_model
 import extract_features
 
 
+
 def get_multi_accdoa_labels(accdoa_in, nb_classes):
     x0, y0, z0 = accdoa_in[:, :, :1*nb_classes], accdoa_in[:, :, 1*nb_classes:2*nb_classes], accdoa_in[:, :, 2*nb_classes:3*nb_classes]
     dist0 = accdoa_in[:, :, 3*nb_classes:4*nb_classes]
