@@ -7,6 +7,7 @@ import librosa
 from sklearn import preprocessing
 import wave
 import contextlib
+import shutil
 
 class SELDFeatureExtractor():
     def __init__(self, params):
@@ -20,7 +21,9 @@ class SELDFeatureExtractor():
         self._dataset_combination = '{}_{}'.format('audio', 'dev')
         self.root_dir = os.path.join(params['root_dir'], self._dataset_combination)
         self.feat_dir = params['feat_dir']
-        self.desc_dir = os.path.join(self.root_dir, 'metadata_dev')
+        self.label_dir = params['label_dir']
+        self.desc_dir = os.path.join(params['root_dir'], 'metadata')
+        self.norm_feat_dir = params['norm_feat_dir']
         self.fs = params['sampling_rate']
         self.hop_len_s = params['hop_len']
         self.hop_len = int(self.fs * self.hop_len_s)
@@ -30,9 +33,13 @@ class SELDFeatureExtractor():
         self.nfft = 2 ** (self.win_len - 1).bit_length()
         self.nb_mel_bins = params['nb_mels']
         self.nb_channels = 4 # limit channels up to 4
+        self.nb_unique_classes = params['unique_classes']
+        self._label_frame_res = self.fs / float(self.label_hop_len)
+        self._nb_label_frames_1s = int(self._label_frame_res)
         self.eps = 1e-8
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
         self.filewise_frames = {}
+        self.format_type = {}
 
         self.nb_mels = params['nb_mels']
         self.mel_wts = librosa.filters.mel(sr=self.fs, n_fft=self.nfft, n_mels=self.nb_mel_bins).T
@@ -42,20 +49,17 @@ class SELDFeatureExtractor():
             print('{} folder does not exist, creating it.'.format(folder_name))
             os.makedirs(folder_name)
 
+    def delete_and_create_folder(folder_name):
+        if os.path.exists(folder_name) and os.path.isdir(folder_name):
+            shutil.rmtree(folder_name)
+        os.makedirs(folder_name, exist_ok=True)
+
     def load_audio(self, audio_path):
         fs, audio = wav.read(audio_path)
         audio = audio / 32768.0 + self.eps
 
         if audio.shape[1] < 4:  # stereo
-            L = audio[:, 0]
-            R = audio[:, 1]
-
-            W = (L + R) / np.sqrt(2) # mimic omnidirectional
-            X = (L - R) / np.sqrt(2) # mimic x axis
-            Y = np.zeros_like(W) # fake channel
-            Z = np.zeros_like(W) # fake channel
-
-            audio = np.stack([W, X, Y, Z], axis=1)
+            audio = audio[:, :2]
 
         else:  # FOA
             audio = audio[:, :4]
@@ -74,12 +78,23 @@ class SELDFeatureExtractor():
     def get_spectrogram_for_file(self, audio_filename):
         audio_in, fs = self.load_audio(audio_filename)
 
+        if audio_in.shape[1] < 4:
+            L = audio_in[:, 0]
+            R = audio_in[:, 1]
+
+            W = (L + R) / np.sqrt(2) # mimic omnidirectional
+            X = (L - R) / np.sqrt(2) # mimic x axis
+            Y = np.zeros_like(W) # fake channel
+            Z = np.zeros_like(W) # fake channel
+
+            audio = np.stack([W, X, Y, Z], axis=1)
+
         nb_feat_frames = int(len(audio_in) / float(self.hop_len))
         nb_label_frames = int(len(audio_in) / float(self.label_hop_len))
         self.filewise_frames[os.path.basename(audio_filename).split('.')[0]] = [nb_feat_frames, nb_label_frames]
 
         audio_spec = self.spectrogram(audio_in, nb_feat_frames)
-        return audio_spec
+        return audio_spec, audio_in.shape[1]
 
     def get_mel_spectrogram(self, linear_spectra):
         mel_feat = np.zeros((linear_spectra.shape[0], self.nb_mel_bins, linear_spectra.shape[-1]))
@@ -91,6 +106,26 @@ class SELDFeatureExtractor():
         mel_feat = mel_feat.transpose((0, 2, 1)) # shape (T, 4, F)
 
         return mel_feat
+    
+    def get_ild_ipd(self, linear_spectra):
+        l = linear_spectra[:, :, 0]
+        r = linear_spectra[:, :, 1]
+
+        # ild
+        mag_l = np.abs(l) + self.eps  # Add epsilon to avoid log(0)
+        mag_r = np.abs(r) + self.eps
+        ild_raw = 20 * np.log10(mag_l / mag_r)
+        ild = np.dot(ild_raw, self.mel_wts)
+
+        # ipd
+        phase_l = np.angle(l)
+        phase_r = np.angle(r)
+        ipd_raw = phase_l - phase_r  # Shape: [time, freq]
+        ipd = np.dot(ipd_raw, self.mel_wts)
+
+        ild_ipd_features = np.concatenate([ild, ipd], axis=-1)
+
+        return ild_ipd_features
 
     def get_intensity_vectors(self, linear_spectra):
         W = linear_spectra[:, :, 0]
@@ -107,19 +142,31 @@ class SELDFeatureExtractor():
 
     def extract_file_feature(self, arg_in):
         file_cnt, wav_path, feat_path = arg_in
-        spect = self.get_spectrogram_for_file(wav_path)
+        spect, num_channels = self.get_spectrogram_for_file(wav_path)
+        
+        base_name = os.path.basename(wav_path).split('.')[0]
 
         # extract mel
         mel_spect = self.get_mel_spectrogram(spect)
 
         feat = None
 
-        # extract intensity vectors
-        foa_iv = self.get_intensity_vectors(spect)
-        feat = np.concatenate((mel_spect, foa_iv.reshape(mel_spect.shape[0], 3, self.nb_mel_bins)), axis=1)
+        if num_channels < 4:  # stereo
+            # extract ild ipd
+            ild_ipd = self.get_ild_ipd(spect)
+            feat = np.concatenate((mel_spect, ild_ipd), axis=-1)
+            self.format_type[base_name] = 'stereo'
+            format = 'stereo'
+
+        else:  # FOA
+            # extract intensity vectors
+            iv = self.get_intensity_vectors(spect)
+            feat = np.concatenate((mel_spect, iv), axis=-1)
+            self.format_type[base_name] = 'foa'
+            format = 'foa'
 
         if feat is not None:
-            print('{}: {}, {}'.format(file_cnt, os.path.basename(wav_path), feat.shape))
+            print('{}: {} [{}], {}'.format(file_cnt, os.path.basename(wav_path), format, feat.shape))
             np.save(feat_path, feat)
 
     def extract_features(self):

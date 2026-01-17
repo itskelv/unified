@@ -1,24 +1,46 @@
-def get_params():
-    # ########### default parameters ##############
-    params = dict(
-        quick_test=True,  # To do quick test. Trains/test on small subset of dataset, and # of epochs
+params = {
+    'root_dir': '../unidataset',
+    'desc_dir': '../unidataset/metadata',
+    'feat_dir': '../unidataset/features',
+    'norm_feat_dir': '../unidataset/norm_features',
+    'label_dir': '../unidataset/labels',
 
-        finetune_mode=True,  # Finetune on existing model, requires the pretrained model path set - pretrained_model_weights
-        pretrained_model_weights='3_1_dev_split0_multiaccdoa_foa_model.h5',
+    'dcase_output_dir': 'results/',
+    'unique_classes': 13,
+    'sampling_rate': 24000,
+    'hop_len': 0.02,
+    'label_hop_len': 0.1,
+    'nb_mels': 64,
 
-        # INPUT PATH
-        dataset_dir='../unifieddataset/',
+    'batch_size': 128,
+    'label_sequence_length': 50,
+    'model_dir': 'models/',
+    'dropout_rate': 0.05,
+    'nb_cnn2d_filt': 64,  
+    'f_pool_size': [4, 4, 2],
 
-        # OUTPUT PATHS
-        feat_label_dir='../unifieddataset/seld_feat_label/',
+    'nb_heads': 8,
+    'nb_self_attn_layers': 2,
+    'nb_transformer_layers': 2,
 
-        mode='dev',  # 'dev' - development or 'eval' - evaluation dataset
-        dataset='foa',  # 'foa' - ambisonic or 'mic' - microphone signals
+    'nb_rnn_layers': 2,
+    'rnn_size': 128,
 
-        # FEATURE PARAMS
-        fs=24000,
-        hop_len_s=0.02,
-        label_hop_len_s=0.1,
-        max_audio_len_s=60,
-        nb_mel_bins=64,
-    )
+    'nb_fnn_layers': 1,
+    'fnn_size': 128,
+
+    'nb_epochs': 250,
+    'lr': 1e-3,
+
+    'average': 'macro',
+    'segment_based_metrics': False,
+    'evaluate_distance': True,
+    'lad_doa_thresh': 20,
+    'lad_dist_thresh': float('inf'),
+    'lad_reldist_thres': float('1'),
+}
+
+params['feature_label_resolution'] = int(params['label_hop_len'] // params['hop_len'])
+params['feature_sequence_length'] = params['label_sequence_length'] * params['feature_label_resolution']
+params['t_pool_size'] = [params['feature_label_resolution'], 1, 1]
+params['patience'] = int(params['nb_epochs'])
