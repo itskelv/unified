@@ -59,7 +59,15 @@ class SELDFeatureExtractor():
         audio = audio / 32768.0 + self.eps
 
         if audio.shape[1] < 4:  # stereo
-            audio = audio[:, :2]
+            L = audio[:, 0]
+            R = audio[:, 1]
+
+            W = (L + R) / np.sqrt(2) # mimic omnidirectional
+            X = (L - R) / np.sqrt(2) # mimic x axis
+            Y = np.zeros_like(W) # fake channel
+            Z = np.zeros_like(W) # fake channel
+
+            audio = np.stack([W, X, Y, Z], axis=1)
 
         else:  # FOA
             audio = audio[:, :4]
@@ -77,17 +85,6 @@ class SELDFeatureExtractor():
 
     def get_spectrogram_for_file(self, audio_filename):
         audio_in, fs = self.load_audio(audio_filename)
-
-        if audio_in.shape[1] < 4:
-            L = audio_in[:, 0]
-            R = audio_in[:, 1]
-
-            W = (L + R) / np.sqrt(2) # mimic omnidirectional
-            X = (L - R) / np.sqrt(2) # mimic x axis
-            Y = np.zeros_like(W) # fake channel
-            Z = np.zeros_like(W) # fake channel
-
-            audio = np.stack([W, X, Y, Z], axis=1)
 
         nb_feat_frames = int(len(audio_in) / float(self.hop_len))
         nb_label_frames = int(len(audio_in) / float(self.label_hop_len))
@@ -186,8 +183,73 @@ class SELDFeatureExtractor():
                 self.extract_file_feature((file_cnt, wav_path, feat_path))
                 arg_list.append((file_cnt, wav_path, feat_path))
 
-    def get_frame_stats(self):
+    def preprocess_features(self):
+        self.create_folder(self.norm_feat_dir)
 
+        foa_scaler = preprocessing.StandardScaler()
+        stereo_scaler = preprocessing.StandardScaler()
+        
+        # track files' format
+        foa_files = []
+        stereo_files = []
+
+        print('Estimating weights for normalizing feature files:')
+        print('\t\tfeat_dir: {}'.format(self.feat_dir))
+        
+        for file_cnt, file_name in enumerate(os.listdir(self.feat_dir)):
+            if not file_name.endswith('.npy'):
+                continue
+                
+            print('{}: {}'.format(file_cnt, file_name))
+            feat_file = np.load(os.path.join(self.feat_dir, file_name))
+            
+            base_name = file_name.split('.')[0]
+            
+            if base_name in self.format_type:
+                format_type = self.format_type[base_name]
+                
+                if format_type == 'foa':
+                    foa_scaler.partial_fit(feat_file)
+                    foa_files.append(file_name)
+                elif format_type == 'stereo':
+                    stereo_scaler.partial_fit(feat_file)
+                    stereo_files.append(file_name)
+            else:
+                if feat_file.shape[1] == 7 * self.nb_mels:
+                    foa_scaler.partial_fit(feat_file)
+                    foa_files.append(file_name)
+                elif feat_file.shape[1] == 4 * self.nb_mels:
+                    stereo_scaler.partial_fit(feat_file)
+                    stereo_files.append(file_name)
+            
+            del feat_file
+
+        print('Normalizing feature files:')
+        print('\t\tfeat_dir_norm {}'.format(self.norm_feat_dir))
+        
+        # Normalize foa files
+        print(f'Normalizing {len(foa_files)} FOA files...')
+        for file_name in foa_files:
+            feat_file = np.load(os.path.join(self.feat_dir, file_name))
+            feat_file = foa_scaler.transform(feat_file)
+            np.save(os.path.join(self.norm_feat_dir, file_name), feat_file)
+            del feat_file
+            
+        # Normalize stereo files  
+        print(f'Normalizing {len(stereo_files)} stereo files...')
+        for file_name in stereo_files:
+            feat_file = np.load(os.path.join(self.feat_dir, file_name))
+            feat_file = stereo_scaler.transform(feat_file)
+            np.save(os.path.join(self.norm_feat_dir, file_name), feat_file)
+            del feat_file
+
+        print('Normalized files written to {}'.format(self.norm_feat_dir))
+        print(f'Total: {len(foa_files) + len(stereo_files)} files')
+        print(f'  - FOA: {len(foa_files)} files (7×{self.nb_mels} = {7*self.nb_mels} features)')
+        print(f'  - Stereo: {len(stereo_files)} files (4×{self.nb_mels} = {4*self.nb_mels} features)')
+
+    def get_frame_stats(self):
+        """Compute frame statistics for all files"""
         if len(self.filewise_frames) != 0:
             return
 
@@ -205,28 +267,276 @@ class SELDFeatureExtractor():
                 self.filewise_frames[file_name.split('.')[0]] = [nb_feat_frames, nb_label_frames]
         return
 
+    def load_output_format_file(self, _output_format_file, cm2m=False):
+        """
+        Loads DCASE output format csv file and returns it in dictionary format
+        """
+        _output_dict = {}
+        _fid = open(_output_format_file, 'r')
+        next(_fid)  # Skip header
+        _words = []     # For empty files
+        for _line in _fid:
+            _words = _line.strip().split(',')
+            _frame_ind = int(_words[0])
+            if _frame_ind not in _output_dict:
+                _output_dict[_frame_ind] = []
+            if len(_words) == 4:  # frame, class idx, polar coordinates(2)
+                _output_dict[_frame_ind].append([int(_words[1]), 0, float(_words[2]), float(_words[3])])
+            if len(_words) == 5:  # frame, class idx, source_id, polar coordinates(2)
+                _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4])])
+            if len(_words) == 6:  # frame, class idx, source_id, polar coordinates(2), distance
+                _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4]), float(_words[5])/100 if cm2m else float(_words[5])])
+            elif len(_words) == 7:  # frame, class idx, source_id, cartesian coordinates(3), distance
+                _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4]), float(_words[5]), float(_words[6])/100 if cm2m else float(_words[6])])
+        _fid.close()
+        if len(_words) == 7:
+            _output_dict = self.convert_output_format_cartesian_to_polar(_output_dict)
+        return _output_dict
 
-    def extract_all_labels(self):
+    def convert_output_format_polar_to_cartesian(self, in_dict):
+        """Convert polar coordinates (azimuth, elevation) to Cartesian (x, y, z)"""
+        out_dict = {}
+        for frame_cnt in in_dict.keys():
+            if frame_cnt not in out_dict:
+                out_dict[frame_cnt] = []
+                for tmp_val in in_dict[frame_cnt]:
+                    ele_rad = tmp_val[3]*np.pi/180.
+                    azi_rad = tmp_val[2]*np.pi/180.
+
+                    tmp_label = np.cos(ele_rad)
+                    x = np.cos(azi_rad) * tmp_label
+                    y = np.sin(azi_rad) * tmp_label
+                    z = np.sin(ele_rad)
+                    out_dict[frame_cnt].append(tmp_val[0:2] + [x, y, z] + tmp_val[4:])
+        return out_dict
+
+    def convert_output_format_cartesian_to_polar(self, in_dict):
+        """Convert Cartesian coordinates (x, y, z) to polar (azimuth, elevation)"""
+        out_dict = {}
+        for frame_cnt in in_dict.keys():
+            if frame_cnt not in out_dict:
+                out_dict[frame_cnt] = []
+                for tmp_val in in_dict[frame_cnt]:
+                    x, y, z = tmp_val[2], tmp_val[3], tmp_val[4]
+
+                    # in degrees
+                    azimuth = np.arctan2(y, x) * 180 / np.pi
+                    elevation = np.arctan2(z, np.sqrt(x**2 + y**2)) * 180 / np.pi
+                    r = np.sqrt(x**2 + y**2 + z**2)
+                    out_dict[frame_cnt].append(tmp_val[0:2] + [azimuth, elevation] + tmp_val[5:])
+        return out_dict
+
+    def get_adpit_labels_for_file(self, _desc_file, _nb_label_frames):
+        """
+        ADPIT label format for multi-ACCDOA
+        Returns: [nb_frames, 6, 5, max_classes] (6 tracks, 5 values: act + x + y + z + dist)
+        """
+        se_label = np.zeros((_nb_label_frames, 6, self.nb_unique_classes))
+        x_label = np.zeros((_nb_label_frames, 6, self.nb_unique_classes))
+        y_label = np.zeros((_nb_label_frames, 6, self.nb_unique_classes))
+        z_label = np.zeros((_nb_label_frames, 6, self.nb_unique_classes))
+        dist_label = np.zeros((_nb_label_frames, 6, self.nb_unique_classes))
+
+        for frame_ind, active_event_list in _desc_file.items():
+            if frame_ind < _nb_label_frames:
+                active_event_list.sort(key=lambda x: x[0])  # sort for ov from the same class
+                active_event_list_per_class = []
+                for i, active_event in enumerate(active_event_list):
+                    active_event_list_per_class.append(active_event)
+                    if i == len(active_event_list) - 1:  # if the last
+                        if len(active_event_list_per_class) == 1:  # if no ov from the same class
+                            # a0----
+                            active_event_a0 = active_event_list_per_class[0]
+                            se_label[frame_ind, 0, active_event_a0[0]] = 1
+                            x_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[2]
+                            y_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[3]
+                            z_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[4]
+                            dist_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[5]/100.
+                        elif len(active_event_list_per_class) == 2:  # if ov with 2 sources from the same class
+                            # --b0--
+                            active_event_b0 = active_event_list_per_class[0]
+                            se_label[frame_ind, 1, active_event_b0[0]] = 1
+                            x_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[2]
+                            y_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[3]
+                            z_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[4]
+                            dist_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[5]/100.
+                            # --b1--
+                            active_event_b1 = active_event_list_per_class[1]
+                            se_label[frame_ind, 2, active_event_b1[0]] = 1
+                            x_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[2]
+                            y_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[3]
+                            z_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[4]
+                            dist_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[5]/100.
+                        else:  # if ov with more than 2 sources from the same class
+                            # ----c0
+                            active_event_c0 = active_event_list_per_class[0]
+                            se_label[frame_ind, 3, active_event_c0[0]] = 1
+                            x_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[2]
+                            y_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[3]
+                            z_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[4]
+                            dist_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[5]/100.
+                            # ----c1
+                            active_event_c1 = active_event_list_per_class[1]
+                            se_label[frame_ind, 4, active_event_c1[0]] = 1
+                            x_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[2]
+                            y_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[3]
+                            z_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[4]
+                            dist_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[5]/100.
+                            # ----c2
+                            active_event_c2 = active_event_list_per_class[2]
+                            se_label[frame_ind, 5, active_event_c2[0]] = 1
+                            x_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[2]
+                            y_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[3]
+                            z_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[4]
+                            dist_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[5]/100.
+
+                    elif active_event[0] != active_event_list[i + 1][0]:  # if the next is not the same class
+                        if len(active_event_list_per_class) == 1:  # if no ov from the same class
+                            # a0----
+                            active_event_a0 = active_event_list_per_class[0]
+                            se_label[frame_ind, 0, active_event_a0[0]] = 1
+                            x_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[2]
+                            y_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[3]
+                            z_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[4]
+                            dist_label[frame_ind, 0, active_event_a0[0]] = active_event_a0[5]/100.
+                        elif len(active_event_list_per_class) == 2:  # if ov with 2 sources from the same class
+                            # --b0--
+                            active_event_b0 = active_event_list_per_class[0]
+                            se_label[frame_ind, 1, active_event_b0[0]] = 1
+                            x_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[2]
+                            y_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[3]
+                            z_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[4]
+                            dist_label[frame_ind, 1, active_event_b0[0]] = active_event_b0[5]/100.
+                            # --b1--
+                            active_event_b1 = active_event_list_per_class[1]
+                            se_label[frame_ind, 2, active_event_b1[0]] = 1
+                            x_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[2]
+                            y_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[3]
+                            z_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[4]
+                            dist_label[frame_ind, 2, active_event_b1[0]] = active_event_b1[5]/100.
+                        else:  # if ov with more than 2 sources from the same class
+                            # ----c0
+                            active_event_c0 = active_event_list_per_class[0]
+                            se_label[frame_ind, 3, active_event_c0[0]] = 1
+                            x_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[2]
+                            y_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[3]
+                            z_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[4]
+                            dist_label[frame_ind, 3, active_event_c0[0]] = active_event_c0[5]/100.
+                            # ----c1
+                            active_event_c1 = active_event_list_per_class[1]
+                            se_label[frame_ind, 4, active_event_c1[0]] = 1
+                            x_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[2]
+                            y_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[3]
+                            z_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[4]
+                            dist_label[frame_ind, 4, active_event_c1[0]] = active_event_c1[5]/100.
+                            # ----c2
+                            active_event_c2 = active_event_list_per_class[2]
+                            se_label[frame_ind, 5, active_event_c2[0]] = 1
+                            x_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[2]
+                            y_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[3]
+                            z_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[4]
+                            dist_label[frame_ind, 5, active_event_c2[0]] = active_event_c2[5]/100.
+                        active_event_list_per_class = []
+
+        label_mat = np.stack((se_label, x_label, y_label, z_label, dist_label), axis=2)
+        return label_mat
+
+    def extract_labels(self):
+        """Main method to extract labels for all files"""
         self.get_frame_stats()
-        self.label_dir = params['labeled_feat_dir']
+        self.create_folder(self.label_dir)
 
         print('Extracting labels:')
         print('\t\taud_dir {}\n\t\tdesc_dir {}\n\t\tlabel_dir {}'.format(
             self.root_dir, self.desc_dir, self.label_dir))
-        self.create_folder(self.label_dir)
+
         for sub_folder in os.listdir(self.desc_dir):
             loc_desc_folder = os.path.join(self.desc_dir, sub_folder)
             for file_cnt, file_name in enumerate(os.listdir(loc_desc_folder)):
                 wav_filename = '{}.wav'.format(file_name.split('.')[0])
                 nb_label_frames = self.filewise_frames[file_name.split('.')[0]][1]
+                
+                # Load description file
                 desc_file_polar = self.load_output_format_file(os.path.join(loc_desc_folder, file_name))
+                
+                # Convert to Cartesian (required for labels)
                 desc_file = self.convert_output_format_polar_to_cartesian(desc_file_polar)
-                if self._multi_accdoa:
-                    label_mat = self.get_adpit_labels_for_file(desc_file, nb_label_frames)
-                else:
-                    label_mat = self.get_labels_for_file(desc_file, nb_label_frames)
+                
+                # Generate labels
+                label_mat = self.get_adpit_labels_for_file(desc_file, nb_label_frames)
+                
                 print('{}: {}, {}'.format(file_cnt, file_name, label_mat.shape))
                 np.save(os.path.join(self.label_dir, '{}.npy'.format(wav_filename.split('.')[0])), label_mat)
+
+    def segment_labels(self, _pred_dict, _max_frames):
+        '''
+            Collects class-wise sound event location information in segments of length 1s from reference dataset
+        :param _pred_dict: Dictionary containing frame-wise sound event time and location information. Output of SELD method
+        :param _max_frames: Total number of frames in the recording
+        :return: Dictionary containing class-wise sound event location information in each segment of audio
+                dictionary_name[segment-index][class-index] = list(frame-cnt-within-segment, azimuth, elevation)
+        '''
+        nb_blocks = int(np.ceil(_max_frames / float(self._nb_label_frames_1s)))
+        output_dict = {x: {} for x in range(nb_blocks)}
+        for frame_cnt in range(0, _max_frames, self._nb_label_frames_1s):
+
+            # Collect class-wise information for each block
+            # [class][frame] = <list of doa values>
+            # Data structure supports multi-instance occurence of same class
+            block_cnt = frame_cnt // self._nb_label_frames_1s
+            loc_dict = {}
+            for audio_frame in range(frame_cnt, frame_cnt + self._nb_label_frames_1s):
+                if audio_frame not in _pred_dict:
+                    continue
+                for value in _pred_dict[audio_frame]:
+                    if value[0] not in loc_dict:
+                        loc_dict[value[0]] = {}
+
+                    block_frame = audio_frame - frame_cnt
+                    if block_frame not in loc_dict[value[0]]:
+                        loc_dict[value[0]][block_frame] = []
+                    loc_dict[value[0]][block_frame].append(value[1:])
+
+            # Update the block wise details collected above in a global structure
+            for class_cnt in loc_dict:
+                if class_cnt not in output_dict[block_cnt]:
+                    output_dict[block_cnt][class_cnt] = []
+
+                keys = [k for k in loc_dict[class_cnt]]
+                values = [loc_dict[class_cnt][k] for k in loc_dict[class_cnt]]
+
+                output_dict[block_cnt][class_cnt].append([keys, values])
+
+        return output_dict
+    
+    def organize_labels(self, _pred_dict, _max_frames):
+        '''
+            Collects class-wise sound event location information in every frame, similar to segment_labels but at frame level
+        :param _pred_dict: Dictionary containing frame-wise sound event time and location information. Output of SELD method
+        :param _max_frames: Total number of frames in the recording
+        :return: Dictionary containing class-wise sound event location information in each frame
+                dictionary_name[frame-index][class-index][track-index] = [azimuth, elevation, (distance)] or
+                                                                         [x, y, z, (distance)]
+        '''
+        nb_frames = _max_frames
+        output_dict = {x: {} for x in range(nb_frames)}
+        for frame_idx in range(0, _max_frames):
+            if frame_idx not in _pred_dict:
+                continue
+            for [class_idx, track_idx, *localization] in _pred_dict[frame_idx]:
+                if class_idx not in output_dict[frame_idx]:
+                    output_dict[frame_idx][class_idx] = {}
+
+                if track_idx not in output_dict[frame_idx][class_idx]:
+                    output_dict[frame_idx][class_idx][track_idx] = localization
+                else:
+                    # Repeated track_idx for the same class_idx in the same frame_idx, the model is not estimating
+                    # track IDs, so track_idx is set to a negative value to distinguish it from a proper track ID
+                    min_track_idx = np.min(np.array(list(output_dict[frame_idx][class_idx].keys())))
+                    new_track_idx = min_track_idx - 1 if min_track_idx < 0 else -1
+                    output_dict[frame_idx][class_idx][new_track_idx] = localization
+
+        return output_dict
     
 
 if __name__ == '__main__':
@@ -237,4 +547,4 @@ if __name__ == '__main__':
     feature_extractor = SELDFeatureExtractor(params)
     feature_extractor.extract_features()
     feature_extractor.preprocess_features()
-    feature_extractor.extract_all_labels()
+    feature_extractor.extract_labels()
