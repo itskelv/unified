@@ -228,7 +228,7 @@ class SELDFeatureExtractor():
                 if feat_file.shape[1] == 7 * self.nb_mels:
                     foa_scaler.partial_fit(feat_file)
                     foa_files.append(file_name)
-                elif feat_file.shape[1] == 4 * self.nb_mels:
+                elif feat_file.shape[1] == 6 * self.nb_mels:
                     stereo_scaler.partial_fit(feat_file)
                     stereo_files.append(file_name)
             
