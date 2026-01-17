@@ -59,6 +59,8 @@ class SELDFeatureExtractor():
         audio = audio / 32768.0 + self.eps
 
         if audio.shape[1] < 4:  # stereo
+            stereo = audio[:, :2]
+
             L = audio[:, 0]
             R = audio[:, 1]
 
@@ -69,10 +71,12 @@ class SELDFeatureExtractor():
 
             audio = np.stack([W, X, Y, Z], axis=1)
 
+            return audio, stereo, fs
+
         else:  # FOA
             audio = audio[:, :4]
 
-        return audio, fs
+            return audio, None, fs
 
     def spectrogram(self, audio_input, nb_frames):
         nb_ch = audio_input.shape[1]
@@ -84,15 +88,20 @@ class SELDFeatureExtractor():
         return np.array(spectra).T
 
     def get_spectrogram_for_file(self, audio_filename):
-        audio_in, fs = self.load_audio(audio_filename)
+        audio_in, stereo_audio,  fs = self.load_audio(audio_filename)
 
         nb_feat_frames = int(len(audio_in) / float(self.hop_len))
         nb_label_frames = int(len(audio_in) / float(self.label_hop_len))
         self.filewise_frames[os.path.basename(audio_filename).split('.')[0]] = [nb_feat_frames, nb_label_frames]
 
         audio_spec = self.spectrogram(audio_in, nb_feat_frames)
-        return audio_spec, audio_in.shape[1]
 
+        stereo_spec = None
+        if stereo_audio is not None:
+            stereo_spec = self.spectrogram(stereo_audio, nb_feat_frames)
+
+        return audio_spec, stereo_spec
+    
     def get_mel_spectrogram(self, linear_spectra):
         mel_feat = np.zeros((linear_spectra.shape[0], self.nb_mel_bins, linear_spectra.shape[-1]))
         for ch_cnt in range(linear_spectra.shape[-1]):
@@ -139,7 +148,7 @@ class SELDFeatureExtractor():
 
     def extract_file_feature(self, arg_in):
         file_cnt, wav_path, feat_path = arg_in
-        spect, num_channels = self.get_spectrogram_for_file(wav_path)
+        spect, stereo_spect = self.get_spectrogram_for_file(wav_path)
         
         base_name = os.path.basename(wav_path).split('.')[0]
 
@@ -148,9 +157,9 @@ class SELDFeatureExtractor():
 
         feat = None
 
-        if num_channels < 4:  # stereo
+        if stereo_spect is not None:  # stereo
             # extract ild ipd
-            ild_ipd = self.get_ild_ipd(spect)
+            ild_ipd = self.get_ild_ipd(stereo_spect)
             feat = np.concatenate((mel_spect, ild_ipd), axis=-1)
             self.format_type[base_name] = 'stereo'
             format = 'stereo'
