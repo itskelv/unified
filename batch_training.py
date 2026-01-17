@@ -317,8 +317,6 @@ def train_epoch(data_generator, optimizer, model, criterion, params, device):
 
 
 def main(argv):
-    print("Starting training with arguments:", argv)
-    
     # Set up device
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")

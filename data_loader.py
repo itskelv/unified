@@ -63,7 +63,7 @@ class UnifiedDataGenerator(object):
             
                         if feat.shape[1] == 7 * self._nb_mel_bins:
                             self._file_formats[filename] = 'foa'
-                        elif feat.shape[1] == 4 * self._nb_mel_bins:
+                        elif feat.shape[1] == 6 * self._nb_mel_bins:
                             self._file_formats[filename] = 'stereo'
                         else:
                             print(f'WARNING: Unknown feature dimension {feat.shape[1]} for {filename}')
