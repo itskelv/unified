@@ -115,8 +115,23 @@ class FeatureClass:
 
     def _load_audio(self, audio_path):
         fs, audio = wav.read(audio_path)
+        is_stereo = False
+        if audio.shape[1] < 4:  # stereo
+            L = audio[:, 0]
+            R = audio[:, 1]
+
+            W = (L + R) / np.sqrt(2) # mimic omnidirectional
+            X = (L - R) / np.sqrt(2) # mimic x axis
+            Y = np.zeros_like(W) # fake channel
+            Z = np.zeros_like(W) # fake channel
+
+            audio = np.stack([W, X, Y, Z], axis=1)
+            is_stereo = True
+
+            return audio, fs, is_stereo
+        
         audio = audio[:, :self._nb_channels] / 32768.0 + self._eps
-        return audio, fs
+        return audio, fs, is_stereo
 
     # INPUT FEATURES
     @staticmethod
@@ -188,14 +203,14 @@ class FeatureClass:
         return np.concatenate((linear_spectra, phase_vector), axis=-1)
 
     def _get_spectrogram_for_file(self, audio_filename):
-        audio_in, fs = self._load_audio(audio_filename)
+        audio_in, fs, is_stereo = self._load_audio(audio_filename)
 
         nb_feat_frames = int(len(audio_in) / float(self._hop_len))
         nb_label_frames = int(len(audio_in) / float(self._label_hop_len))
         self._filewise_frames[os.path.basename(audio_filename).split('.')[0]] = [nb_feat_frames, nb_label_frames]
 
         audio_spec = self._spectrogram(audio_in, nb_feat_frames)
-        return audio_spec
+        return audio_spec, is_stereo
 
     # OUTPUT LABELS
     def get_labels_for_file(self, _desc_file, _nb_label_frames):
@@ -351,7 +366,7 @@ class FeatureClass:
 
     def extract_file_feature(self, _arg_in):
         _file_cnt, _wav_path, _feat_path = _arg_in
-        spect = self._get_spectrogram_for_file(_wav_path)
+        spect, is_stereo = self._get_spectrogram_for_file(_wav_path)
 
         # extract mel
         if not self._use_salsalite:
@@ -526,26 +541,48 @@ class FeatureClass:
         :param _output_format_file: DCASE output format CSV
         :return: _output_dict: dictionary
         """
+        is_stereo = 'deg' in _output_format_file.lower()
+
         _output_dict = {}
         _fid = open(_output_format_file, 'r')
-        # next(_fid)
+        
         _words = []     # For empty files
-        for _line in _fid:
-            _words = _line.strip().split(',')
-            _frame_ind = int(_words[0])
-            if _frame_ind not in _output_dict:
-                _output_dict[_frame_ind] = []
-            if len(_words) == 4:  # frame, class idx,  polar coordinates(2) # no distance data, for example in eval pred
-                _output_dict[_frame_ind].append([int(_words[1]), 0, float(_words[2]), float(_words[3])])
-            if len(_words) == 5:  # frame, class idx, source_id, polar coordinates(2) # no distance data, for example in synthetic data fold 1 and 2
-                _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4])])
-            if len(_words) == 6: # frame, class idx, source_id, polar coordinates(2), distance
-                _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4]), float(_words[5])/100 if cm2m else float(_words[5])])
-            elif len(_words) == 7: # frame, class idx, source_id, cartesian coordinates(3), distance
-                _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4]), float(_words[5]), float(_words[6])/100 if cm2m else float(_words[6])])
+
+        if is_stereo:
+            try:
+                next(_fid)  # Skip header
+            except StopIteration:
+                return {} 
+            for _line in _fid:
+                _words = _line.strip().split(',')
+                _frame_ind = int(_words[0]) # frame
+                if _frame_ind not in _output_dict:
+                    _output_dict[_frame_ind] = []
+                _output_dict[_frame_ind].append([
+                    int(_words[1]),     # class id
+                    int(_words[2]),     # source id
+                    float(_words[3]),   # azimuth
+                    float(0),           # elevation = 0 (empty)
+                    float(_words[4])/100 if cm2m else float(_words[4])  # distance
+                    # on screen features are ignored
+        ])
+
+        else:
+            for _line in _fid:
+                _words = _line.strip().split(',')
+                _frame_ind = int(_words[0]) # frame
+                if _frame_ind not in _output_dict:
+                    _output_dict[_frame_ind] = []
+                _output_dict[_frame_ind].append([
+                    int(_words[1]),     # class id
+                    int(_words[2]),     # source id
+                    float(_words[3]),   # azimuth
+                    float(_words[4]),   # elevation
+                    float(_words[5])/100 if cm2m else float(_words[5])  # distance
+                ])   
+
         _fid.close()
-        if len(_words) == 7:
-            _output_dict = self.convert_output_format_cartesian_to_polar(_output_dict)
+        
         return _output_dict
 
     def write_output_format_file(self, _output_format_file, _output_format_dict):

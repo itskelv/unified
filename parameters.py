@@ -15,11 +15,13 @@ def get_params(argv='1'):
 
         # INPUT PATH
         # dataset_dir='DCASE2020_SELD_dataset/',  # Base folder containing the foa/mic and metadata folders
-        dataset_dir='../DCASE2024_SELD_dataset/',
+        # dataset_dir='../DCASE2024_SELD_dataset/',
+        dataset_dir='../unidataset/',
+        feat_label_dir='../unidataset/seld_feat_label/',
 
         # OUTPUT PATHS
         # feat_label_dir='DCASE2020_SELD_dataset/feat_label_hnet/',  # Directory to dump extracted features and labels
-        feat_label_dir='../DCASE2024_SELD_dataset/seld_feat_label/',
+        # feat_label_dir='../DCASE2024_SELD_dataset/seld_feat_label/',
 
         model_dir='models',  # Dumps the trained models and training curves in this folder
         dcase_output_dir='results',  # recording-wise results are dumped in this path.

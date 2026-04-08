@@ -19,6 +19,9 @@ from IPython import embed
 from cls_compute_seld_results import ComputeSELDResults, reshape_3Dto2D
 from SELD_evaluation_metrics import distance_between_cartesian_coordinates
 import seldnet_model 
+import wandb
+
+os.environ['WANDB_API_KEY'] = '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'
 
 def get_accdoa_labels(accdoa_in, nb_classes):
     x, y, z = accdoa_in[:, :, :nb_classes], accdoa_in[:, :, nb_classes:2*nb_classes], accdoa_in[:, :, 2*nb_classes:]
@@ -333,6 +336,12 @@ def main(argv):
     task_id = '1' if len(argv) < 2 else argv[1]
     params = parameters.get_params(task_id)
 
+    wandb.init(
+        project="seld-dcase",   # name of your project
+        name="baseline",        # unique run name
+        config=params               # logs all hyperparameters
+    )
+
     job_id = 1 if len(argv) < 3 else argv[-1]
 
     # Training setup
@@ -420,6 +429,8 @@ def main(argv):
                 params['fnn_size']))
             print(model)
 
+            wandb.watch(model, log="all", log_freq=100)
+
             # Dump results in DCASE output format for calculating final scores
             dcase_output_val_folder = os.path.join(params['dcase_output_dir'], '{}_{}_val'.format(unique_name, strftime("%Y%m%d%H%M%S", gmtime())))
             cls_feature_class.delete_and_create_folder(dcase_output_val_folder)
@@ -483,6 +494,15 @@ def main(argv):
 
                 if patience_cnt > params['patience']:
                     break
+
+                wandb.log({
+                    "epoch": epoch_cnt,
+                    "train_loss": train_loss,
+                    "val_loss": val_loss,
+                    "F-score": val_F,
+                    "AE": val_LE,
+                    "Seld-score": val_seld_scr
+                })
 
             # ---------------------------------------------------------------------
             # Evaluate on unseen test data
@@ -562,7 +582,8 @@ def main(argv):
 
         eval_epoch(data_gen_eval, model, dcase_output_test_folder, params, device)
 
-
+    wandb.finish()
+    
 if __name__ == "__main__":
     try:
         sys.exit(main(sys.argv))
