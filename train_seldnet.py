@@ -338,7 +338,7 @@ def main(argv):
 
     wandb.init(
         project="seld-dcase",   # name of your project
-        name="baseline",        # unique run name
+        name="single_ild_ipd",        # unique run name
         config=params               # logs all hyperparameters
     )
 
