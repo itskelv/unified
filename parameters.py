@@ -10,7 +10,7 @@ def get_params(argv='1'):
     params = dict(
         quick_test=True,  # To do quick test. Trains/test on small subset of dataset, and # of epochs
 
-        finetune_mode=True,  # Finetune on existing model, requires the pretrained model path set - pretrained_model_weights
+        finetune_mode=False,  # Finetune on existing model, requires the pretrained model path set - pretrained_model_weights
         pretrained_model_weights='3_1_dev_split0_multiaccdoa_foa_model.h5',
 
         # INPUT PATH
