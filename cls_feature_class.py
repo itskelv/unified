@@ -38,7 +38,7 @@ class FeatureClass:
         self._dataset_combination = '{}_{}'.format(params['dataset'], 'eval' if is_eval else 'dev')
         self._aud_dir = os.path.join(self._dataset_dir, self._dataset_combination)
 
-        self._desc_dir = None if is_eval else os.path.join(self._dataset_dir, 'metadata_dev')
+        self._desc_dir = None if is_eval else os.path.join(self._dataset_dir, 'metadata')
 
         self._vid_dir = os.path.join(self._dataset_dir, 'video_{}'.format('eval' if is_eval else 'dev'))
         # Output directories
