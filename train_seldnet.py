@@ -370,6 +370,10 @@ def main(argv):
             test_splits = [[4]]
             val_splits = [[4]]
             train_splits = [[3]]
+        elif 'uni' in params['dataset_dir']:
+            test_splits = [[4]]
+            val_splits = [[4]]
+            train_splits = [[3]]
 
         else:
             print('ERROR: Unknown dataset splits')
