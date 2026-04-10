@@ -117,17 +117,8 @@ class SELDMetricsSegmentLevel(object):
             loc_FN, loc_FP = 0, 0
             for class_cnt in range(self._nb_classes):
                 # Counting the number of referece tracks for each class in the segment
-                if class_cnt in gt[block_cnt]:
-                    lengths = [len(val) for val in gt[block_cnt][class_cnt][0][1]]
-                    nb_gt_doas = max(lengths) if len(lengths) > 0 else 0
-                else:
-                    nb_gt_doas = None
-
-                if class_cnt in pred[block_cnt]:
-                    lengths = [len(val) for val in pred[block_cnt][class_cnt][0][1]]
-                    nb_pred_doas = max(lengths) if len(lengths) > 0 else 0
-                else:
-                    nb_pred_doas = None
+                nb_gt_doas = max([len(val) for val in gt[block_cnt][class_cnt][0][1]]) if class_cnt in gt[block_cnt] else None
+                nb_pred_doas = max([len(val) for val in pred[block_cnt][class_cnt][0][1]]) if class_cnt in pred[block_cnt] else None
                 if nb_gt_doas is not None:
                     self._Nref[class_cnt] += nb_gt_doas
                 if class_cnt in gt[block_cnt] and class_cnt in pred[block_cnt]:
