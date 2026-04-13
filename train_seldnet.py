@@ -338,7 +338,7 @@ def main(argv):
 
     wandb.init(
         project="seld-dcase",   # name of your project
-        name="baseline",        # unique run name
+        name="foa-only",        # unique run name
         config=params               # logs all hyperparameters
     )
 
@@ -371,6 +371,10 @@ def main(argv):
             val_splits = [[4]]
             train_splits = [[3]]
         elif 'uni' in params['dataset_dir']:
+            test_splits = [[4]]
+            val_splits = [[4]]
+            train_splits = [[3]]
+        elif 'FOA' in params['dataset_dir']:
             test_splits = [[4]]
             val_splits = [[4]]
             train_splits = [[3]]

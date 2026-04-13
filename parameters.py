@@ -14,10 +14,10 @@ def get_params(argv='1'):
         pretrained_model_weights='3_1_dev_split0_multiaccdoa_foa_model.h5',
 
         # INPUT PATH
-        # dataset_dir='DCASE2020_SELD_dataset/',  # Base folder containing the foa/mic and metadata folders
-        # dataset_dir='../DCASE2024_SELD_dataset/',
-        dataset_dir='../unidataset/',
-        feat_label_dir='../unidataset/seld_feat_label/',
+        dataset_dir='../DCASE_FOA_DATASET',  # Base folder containing the foa/mic and metadata folders
+        dataset_dir='../DCASE_FOA_DATASET/',
+        # dataset_dir='../unidataset/',
+        # feat_label_dir='../unidataset/seld_feat_label/',
 
         # OUTPUT PATHS
         # feat_label_dir='DCASE2020_SELD_dataset/feat_label_hnet/',  # Directory to dump extracted features and labels
