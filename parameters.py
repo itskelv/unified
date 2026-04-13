@@ -14,7 +14,7 @@ def get_params(argv='1'):
         pretrained_model_weights='3_1_dev_split0_multiaccdoa_foa_model.h5',
 
         # INPUT PATH
-        dataset_dir='../DCASE_FOA_DATASET',  # Base folder containing the foa/mic and metadata folders
+        dataset_dir='../DCASE_FOA_DATASET/',  # Base folder containing the foa/mic and metadata folders
         dataset_dir='../DCASE_FOA_DATASET/',
         # dataset_dir='../unidataset/',
         # feat_label_dir='../unidataset/seld_feat_label/',
