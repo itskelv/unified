@@ -496,9 +496,6 @@ def main(argv):
                         '({:0.2f}/{:0.2f}/{:0.2f}/{:0.2f}/{:0.2f})'.format( best_F, best_LE, best_dist_err, best_rel_dist_err, best_seld_scr))
                 )
 
-                if patience_cnt > params['patience']:
-                    break
-
                 wandb.log({
                     "epoch": epoch_cnt,
                     "train_loss": train_loss,
@@ -507,6 +504,9 @@ def main(argv):
                     "AE": val_LE,
                     "Seld-score": val_seld_scr
                 })
+                
+                if patience_cnt > params['patience']:
+                    break
 
             # ---------------------------------------------------------------------
             # Evaluate on unseen test data
