@@ -148,6 +148,8 @@ def get_params(argv='1'):
         params['unique_classes'] = 13
     elif 'uni' in params['dataset_dir']:
         params['unique_classes'] = 13
+    elif 'FOA' in params['dataset_dir']:
+        params['unique_classes'] = 13
 
     for key, value in params.items():
         print("\t{}: {}".format(key, value))
