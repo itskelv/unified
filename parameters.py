@@ -15,7 +15,7 @@ def get_params(argv='1'):
 
         # INPUT PATH
         dataset_dir='../DCASE_FOA_DATASET/',  # Base folder containing the foa/mic and metadata folders
-        feat_label_dir='../DCASE_FOA_DATASET/',
+        feat_label_dir='../DCASE_FOA_DATASET/seld_feat_label',
         # dataset_dir='../unidataset/',
         # feat_label_dir='../unidataset/seld_feat_label/',
 
