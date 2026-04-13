@@ -548,11 +548,14 @@ class FeatureClass:
         
         _words = []     # For empty files
 
+        first_line = next(_fid)
+        if not first_line[0].isdigit():
+            # skip header
+            pass
+        else:
+            _fid.seek(0)
+
         if is_stereo:
-            try:
-                next(_fid)  # Skip header
-            except StopIteration:
-                return {} 
             for _line in _fid:
                 _words = _line.strip().split(',')
                 _frame_ind = int(_words[0]) # frame
