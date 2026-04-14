@@ -534,59 +534,97 @@ class FeatureClass:
                 self.extract_file_vid_feature((file_cnt, mp4_path, vid_feat_path))
 
     # -------------------------------  DCASE OUTPUT  FORMAT FUNCTIONS -------------------------------
-    def load_output_format_file(self, _output_format_file, cm2m=False):  # TODO: Reconsider cm2m conversion
-        """
-        Loads DCASE output format csv file and returns it in dictionary format
+    # def load_output_format_file(self, _output_format_file, cm2m=False):  # TODO: Reconsider cm2m conversion
+    #     """
+    #     Loads DCASE output format csv file and returns it in dictionary format
 
-        :param _output_format_file: DCASE output format CSV
-        :return: _output_dict: dictionary
-        """
+    #     :param _output_format_file: DCASE output format CSV
+    #     :return: _output_dict: dictionary
+    #     """
+    #     is_stereo = 'deg' in _output_format_file.lower()
+
+    #     _output_dict = {}
+    #     _fid = open(_output_format_file, 'r')
+        
+    #     _words = []     # For empty files
+
+    #     first_line = next(_fid)
+    #     if not first_line[0].isdigit():
+    #         # skip header
+    #         pass
+    #     else:
+    #         _fid.seek(0)
+
+    #     if is_stereo:
+    #         for _line in _fid:
+    #             _words = _line.strip().split(',')
+    #             _frame_ind = int(_words[0]) # frame
+    #             if _frame_ind not in _output_dict:
+    #                 _output_dict[_frame_ind] = []
+    #             _output_dict[_frame_ind].append([
+    #                 int(_words[1]),     # class id
+    #                 int(_words[2]),     # source id
+    #                 float(_words[3]),   # azimuth
+    #                 float(0),           # elevation = 0 (empty)
+    #                 float(_words[4])/100 if cm2m else float(_words[4])  # distance
+    #                 # on screen features are ignored
+    #     ])
+
+    #     else:
+    #         for _line in _fid:
+    #             _words = _line.strip().split(',')
+    #             _frame_ind = int(_words[0]) # frame
+    #             if _frame_ind not in _output_dict:
+    #                 _output_dict[_frame_ind] = []
+    #             _output_dict[_frame_ind].append([
+    #                 int(_words[1]),     # class id
+    #                 int(_words[2]),     # source id
+    #                 float(_words[3]),   # azimuth
+    #                 float(_words[4]),   # elevation
+    #                 float(_words[5])/100 if cm2m else float(_words[5])  # distance
+    #             ])   
+
+    #     _fid.close()
+        
+    #     return _output_dict
+    
+    def load_output_format_file(self, _output_format_file, cm2m=False):
         is_stereo = 'deg' in _output_format_file.lower()
 
-        _output_dict = {}
-        _fid = open(_output_format_file, 'r')
-        
-        _words = []     # For empty files
-
-        first_line = next(_fid)
-        if not first_line[0].isdigit():
-            # skip header
-            pass
-        else:
-            _fid.seek(0)
-
         if is_stereo:
-            for _line in _fid:
-                _words = _line.strip().split(',')
-                _frame_ind = int(_words[0]) # frame
-                if _frame_ind not in _output_dict:
-                    _output_dict[_frame_ind] = []
-                _output_dict[_frame_ind].append([
-                    int(_words[1]),     # class id
-                    int(_words[2]),     # source id
-                    float(_words[3]),   # azimuth
-                    float(0),           # elevation = 0 (empty)
-                    float(_words[4])/100 if cm2m else float(_words[4])  # distance
-                    # on screen features are ignored
-        ])
-
+            label_data = {}
+            with open(_output_format_file, 'r') as file:
+                lines = file.readlines()[1:]  # Skip the header
+                for line in lines:
+                    values = line.strip().split(',')
+                    frame_idx = int(values[0])
+                    data_row = [int(values[1]), int(values[2]), float(values[3]), float(0), float(values[4])]
+                    if frame_idx not in label_data:
+                        label_data[frame_idx] = []
+                    label_data[frame_idx].append(data_row)
+            return label_data
         else:
+            _output_dict = {}
+            _fid = open(_output_format_file, 'r')
+            # next(_fid)
+            _words = []     # For empty files
             for _line in _fid:
                 _words = _line.strip().split(',')
-                _frame_ind = int(_words[0]) # frame
+                _frame_ind = int(_words[0])
                 if _frame_ind not in _output_dict:
                     _output_dict[_frame_ind] = []
-                _output_dict[_frame_ind].append([
-                    int(_words[1]),     # class id
-                    int(_words[2]),     # source id
-                    float(_words[3]),   # azimuth
-                    float(_words[4]),   # elevation
-                    float(_words[5])/100 if cm2m else float(_words[5])  # distance
-                ])   
-
-        _fid.close()
-        
-        return _output_dict
+                if len(_words) == 4:  # frame, class idx,  polar coordinates(2) # no distance data, for example in eval pred
+                    _output_dict[_frame_ind].append([int(_words[1]), 0, float(_words[2]), float(_words[3])])
+                if len(_words) == 5:  # frame, class idx, source_id, polar coordinates(2) # no distance data, for example in synthetic data fold 1 and 2
+                    _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4])])
+                if len(_words) == 6: # frame, class idx, source_id, polar coordinates(2), distance
+                    _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4]), float(_words[5])/100 if cm2m else float(_words[5])])
+                elif len(_words) == 7: # frame, class idx, source_id, cartesian coordinates(3), distance
+                    _output_dict[_frame_ind].append([int(_words[1]), int(_words[2]), float(_words[3]), float(_words[4]), float(_words[5]), float(_words[6])/100 if cm2m else float(_words[6])])
+            _fid.close()
+            if len(_words) == 7:
+                _output_dict = self.convert_output_format_cartesian_to_polar(_output_dict)
+            return _output_dict
 
     def write_output_format_file(self, _output_format_file, _output_format_dict):
         """
