@@ -97,6 +97,11 @@ class DataGenerator(object):
                         max_frames = temp_feat.shape[0]
             else:
                 if int(filename[4]) in self._splits:  # check which split the file belongs to
+                    label_path = os.path.join(self._label_dir, filename)
+                    if os.path.exists(label_path):
+                        temp_label = np.load(label_path)
+                        if np.sum(temp_label) == 0:
+                            continue 
                     if self._modality == 'audio' or (hasattr(self, '_vid_feat_dir') and os.path.exists(os.path.join(self._vid_feat_dir, filename))):   # some audio files do not have corresponding videos. Ignore them.
                         self._filenames_list.append(filename)
                         temp_feat = np.load(os.path.join(self._feat_dir, filename))
