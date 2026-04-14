@@ -67,10 +67,13 @@ class ComputeSELDResults(object):
                 # Load reference description file
                 gt_dict = self._feat_cls.load_output_format_file(os.path.join(self._desc_dir, split, ref_file), cm2m=True)  # TODO: Reconsider the cm2m conversion
                 gt_dict = self._feat_cls.convert_output_format_polar_to_cartesian(gt_dict)
-                gt_dict = self._feat_cls.load_output_format_file(os.path.join(self._desc_dir, split, ref_file), cm2m=True)  # TODO: Reconsider the cm2m conversion
-                gt_dict = self._feat_cls.convert_output_format_polar_to_cartesian(gt_dict)
                 print(os.path.join(self._desc_dir, split, ref_file))
-                nb_ref_frames = max(list(gt_dict.keys()))
+                if not gt_dict: 
+                    print("Skipping empty metadata file")
+                    nb_ref_frames = 0
+                    continue
+                else:
+                    nb_ref_frames = max(list(gt_dict.keys()))
                 if self.segment_level:
                     self._ref_labels[ref_file] = [self._feat_cls.segment_labels(gt_dict, nb_ref_frames), nb_ref_frames]
                 else:
