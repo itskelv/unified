@@ -62,12 +62,14 @@ class ComputeSELDResults(object):
 
         # collect reference files
         self._ref_labels = {}
+        count=0
         for split in os.listdir(self._desc_dir):
             for ref_file in os.listdir(os.path.join(self._desc_dir, split)):
                 # Load reference description file
                 gt_dict = self._feat_cls.load_output_format_file(os.path.join(self._desc_dir, split, ref_file), cm2m=True)  # TODO: Reconsider the cm2m conversion
                 gt_dict = self._feat_cls.convert_output_format_polar_to_cartesian(gt_dict)
-                print(os.path.join(self._desc_dir, split, ref_file))
+                print(count, os.path.join(self._desc_dir, split, ref_file))
+                count += 1
                 if not gt_dict: 
                     print("Skipping empty metadata file")
                     nb_ref_frames = 0
