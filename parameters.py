@@ -16,8 +16,8 @@ def get_params(argv='1'):
         # INPUT PATH
         # dataset_dir='../DCASE_FOA_DATASET/',  # Base folder containing the foa/mic and metadata folders
         # feat_label_dir='../DCASE_FOA_DATASET/seld_feat_label',
-        dataset_dir='../unidataset/',
-        feat_label_dir='../unidataset/seld_feat_label/',
+        dataset_dir='../halfunidataset/',
+        feat_label_dir='../halfunidataset/seld_feat_label/',
 
         # OUTPUT PATHS
         # feat_label_dir='DCASE2020_SELD_dataset/feat_label_hnet/',  # Directory to dump extracted features and labels
@@ -50,7 +50,7 @@ def get_params(argv='1'):
         # DNN MODEL PARAMETERS
         label_sequence_length=50,    # Feature sequence length
         # batch_size=128,              # Batch size
-        batch_size=512,
+        batch_size=256,
         dropout_rate=0.05,           # Dropout rate, constant for all layers
         nb_cnn2d_filt=64,           # Number of CNN nodes, constant for each layer
         f_pool_size=[4, 4, 2],      # CNN frequency pooling, length of list = number of CNN layers, list value = pooling per layer
@@ -66,7 +66,7 @@ def get_params(argv='1'):
         fnn_size=128,  # FNN contents, length of list = number of layers, list value = number of nodes
 
         # nb_epochs=250,  # Train for maximum epochs
-        nb_epochs=150,
+        nb_epochs=100,
         lr=1e-3,
 
         # METRIC

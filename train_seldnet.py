@@ -329,6 +329,8 @@ def main(argv):
         print('\n\n')
 
     use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        print("using cuda")
     device = torch.device("cuda" if use_cuda else "cpu")
     torch.autograd.set_detect_anomaly(True)
 
