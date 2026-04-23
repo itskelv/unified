@@ -545,6 +545,8 @@ class FeatureClass:
 
         _output_dict = {}
         _fid = open(_output_format_file, 'r')
+
+        print(_output_format_file, is_stereo)
         
         _words = []     # For empty files
 
