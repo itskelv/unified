@@ -171,6 +171,34 @@ class FeatureClass:
             exit()
         return foa_iv
 
+    def _get_single_ild_ipd(self, linear_spectra):
+        w = linear_spectra[:, :, 0]
+        x = linear_spectra[:, :, 1]
+        e = self._eps
+        
+        L = (w + x) / np.sqrt(2)
+        R = (w - x) / np.sqrt(2)
+
+        # Magnitude
+        mag_L = np.abs(L) + e
+        mag_R = np.abs(R) + e
+
+        # Phase
+        phase_L = np.angle(L)
+        phase_R = np.angle(R)
+
+        ild = 20 * np.log10(mag_L / mag_R)
+        ild = np.tanh(ild / 20.0)
+        ild = np.dot(ild, self._mel_wts)
+
+        delta = phase_L - phase_R
+        ipd_cos = np.cos(delta)
+        ipd = np.dot(ipd_cos, self._mel_wts)
+
+        ild_ipd_features = np.stack([ild, ipd])
+
+        return ild_ipd_features
+
     def _get_gcc(self, linear_spectra):
         gcc_channels = nCr(linear_spectra.shape[-1], 2)
         gcc_feat = np.zeros((linear_spectra.shape[0], self._nb_mel_bins, gcc_channels))
@@ -377,6 +405,9 @@ class FeatureClass:
             # extract intensity vectors
             foa_iv = self._get_foa_intensity_vectors(spect)
             feat = np.concatenate((mel_spect, foa_iv), axis=-1)
+            ild_ipd = self._get_single_ild_ipd(spect)
+            ild_ipd = ild_ipd.transpose(1, 0, 2).reshape(spect.shape[0], -1)
+            feat = np.concatenate((feat, ild_ipd), axis=-1)
         elif self._dataset == 'mic':
             if self._use_salsalite:
                 feat = self._get_salsalite(spect)

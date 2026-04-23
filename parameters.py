@@ -17,7 +17,7 @@ def get_params(argv='1'):
         # dataset_dir='../DCASE_FOA_DATASET/',  # Base folder containing the foa/mic and metadata folders
         # feat_label_dir='../DCASE_FOA_DATASET/seld_feat_label',
         dataset_dir='../halfunidataset/',
-        feat_label_dir='../halfunidataset/seld_feat_label/',
+        feat_label_dir='../halfunidataset/seld_singleildipd_feat_label/',
 
         # OUTPUT PATHS
         # feat_label_dir='DCASE2020_SELD_dataset/feat_label_hnet/',  # Directory to dump extracted features and labels

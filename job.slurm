@@ -6,10 +6,10 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:4
-#SBATCH --output=baseline.out
-#SBATCH --error=baseline.err
+#SBATCH --output=uni_single_ildipd.out
+#SBATCH --error=uni_single_ildipd.err
 
 module load cuda/12.1
 conda activate uni
-# python3 batch_feature_extraction.py 3
+python3 batch_feature_extraction.py 3
 python3 train_seldnet.py 3
