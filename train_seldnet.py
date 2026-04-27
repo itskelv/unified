@@ -529,7 +529,7 @@ def main(argv):
                     params=params, split=test_splits[split_cnt], shuffle=False, per_file=True
                 )
                 
-                files = list(data_gen_test.get_filelist)
+                files = list(data_gen_test.get_filelist())
 
                 if mod == 'stereo':
                     data_gen_test._filenames_list = [f for f in files if "deg" in f]
