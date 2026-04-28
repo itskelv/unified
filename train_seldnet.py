@@ -537,6 +537,7 @@ def main(argv):
                     data_gen_test._filenames_list = [f for f in files if "deg" not in f]
 
                 print(len(data_gen_test._filenames_list))
+                data_gen_test._nb_total_batches = len(data_gen_test._filenames_list)
 
                 # Dump results in DCASE output format for calculating final scores
                 dcase_output_test_folder = os.path.join(params['dcase_output_dir'], '{}_{}_test'.format(unique_name, strftime("%Y%m%d%H%M%S", gmtime())))
